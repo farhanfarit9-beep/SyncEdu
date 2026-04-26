@@ -9,11 +9,7 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        .text-gradient {
-            background: linear-gradient(to right, #2563eb, #0891b2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        .text-header { color: #2563eb; } /* Warna biru solid agar terlihat jelas */
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -44,8 +40,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
-                <h1 class="text-6xl font-black italic tracking-tighter text-gradient">SyncEdu</h1>
-                <p class="text-slate-400 font-bold tracking-[0.3em] uppercase text-xs mt-3 bg-slate-100 px-4 py-1 rounded-full">Synchronized Education</p>
+                <h1 class="text-6xl font-black italic tracking-tighter text-blue-600">SyncEdu</h1>
+                <p class="text-black font-bold tracking-[0.3em] uppercase text-xs mt-3 bg-slate-100 px-4 py-1 rounded-full">Synchronized Education</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
@@ -151,16 +147,27 @@
                             <tr>
                                 <th class="p-4">Nama Santri</th>
                                 <th class="p-4 text-center">Kelas</th>
+                                <th class="p-4">Mata Pelajaran</th>
                                 <th class="p-4 text-center">Hasil</th>
                                 <th class="p-4 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tableRiwayatBody" class="text-sm">
-                            <tr><td colspan="4" class="p-10 text-center text-slate-400">Belum ada data...</td></tr>
+                            <tr><td colspan="5" class="p-10 text-center text-slate-400">Belum ada data...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="modalDetail" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h3 class="text-xl font-black text-slate-800 uppercase">Detail Jawaban Murid</h3>
+                <button onclick="document.getElementById('modalDetail').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-2xl">×</button>
+            </div>
+            <div id="isiDetailJawaban" class="space-y-4"></div>
         </div>
     </div>
 
@@ -169,7 +176,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // KODE FIREBASE ANDA (TIDAK DIUBAH)
+        // KODE FIREBASE (TIDAK DIUBAH)
         const firebaseConfig = {
             apiKey: "AIzaSyBQp9Olce8JK6Y8DmjJo8zkR_1XJri8Yco",
             authDomain: "farhan-34b24.firebaseapp.com",
@@ -189,6 +196,7 @@
         let currentTipe = "esai";
         let daftarSoal = [];
         let tugasAktif = null;
+        let dataJawabanLengkap = []; // Simpan data sementara untuk fitur detail
 
         window.showLogin = (role) => {
             document.getElementById('landingSection').classList.add('hidden');
@@ -226,7 +234,7 @@
                     alert("ID Guru tidak ditemukan! Mohon periksa kembali.");
                 } else {
                     tugasAktif = querySnapshot.docs[0].data();
-                    alert(`Alhamdulillah, berhasil terhubung dengan tugas: ${tugasAktif.judul}\nSilakan mulai mengerjakan!`);
+                    alert(`Alhamdulillah, berhasil terhubung dengan tugas: ${tugasAktif.judul}`);
                     
                     document.getElementById('loginMurid').classList.add('hidden');
                     document.getElementById('quizSection').classList.remove('hidden');
@@ -236,8 +244,7 @@
                     renderSoal(tugasAktif.soal);
                 }
             } catch (e) {
-                console.error(e);
-                alert("Terjadi kesalahan saat mencari ID Guru.");
+                alert("Terjadi kesalahan.");
             }
         };
 
@@ -270,24 +277,23 @@
             const containers = document.querySelectorAll('#containerSoal > div');
             let totalBenar = 0;
             let jawabanSiswa = [];
-            let hasPg = false;
+            let totalSoalPg = tugasAktif.soal.filter(x => x.tipe === 'pg').length;
 
             tugasAktif.soal.forEach((s, index) => {
                 let jaw = "";
                 if(s.tipe === 'esai') {
                     jaw = containers[index].querySelector('textarea').value;
+                    jawabanSiswa.push({ pertanyaan: s.pertanyaan, jawaban: jaw, tipe: 'esai' });
                 } else {
-                    hasPg = true;
                     const selected = containers[index].querySelector(`input[name="soal_${index}"]:checked`);
-                    jaw = selected ? selected.value : "";
+                    jaw = selected ? selected.value : "Tidak dijawab";
                     if(jaw === s.pilihan.benar) totalBenar++;
+                    jawabanSiswa.push({ pertanyaan: s.pertanyaan, jawaban: jaw, benar: s.pilihan.benar, tipe: 'pg' });
                 }
-                jawabanSiswa.push({ pertanyaan: s.pertanyaan, jawaban: jaw });
             });
 
             try {
-                // Perbaikan variabel 's' yang error sebelumnya
-                const skorAkhir = hasPg ? `${totalBenar}/${tugasAktif.soal.filter(x => x.tipe === 'pg').length}` : "Perlu Dinilai";
+                const skorAkhir = totalSoalPg > 0 ? `${totalBenar}/${totalSoalPg}` : "Perlu Dinilai";
 
                 await addDoc(collection(db, "jawaban_murid"), {
                     namaMurid: document.getElementById('m_nama').value,
@@ -301,7 +307,7 @@
                 alert("Jawaban Anda berhasil dikirim!");
                 location.reload();
             } catch (e) { 
-                alert("Gagal mengirim jawaban: " + e.message); 
+                alert("Gagal mengirim jawaban."); 
             }
         };
 
@@ -374,14 +380,45 @@
             window.open("https://meet.google.com/new", "_blank");
         };
 
+        // BAGIAN 3: LOGIKA DETAIL JAWABAN
+        window.bukaDetail = (index) => {
+            const data = dataJawabanLengkap[index];
+            const container = document.getElementById('isiDetailJawaban');
+            container.innerHTML = "";
+            
+            data.jawaban.forEach((j, i) => {
+                let infoPg = j.tipe === 'pg' ? `<p class="text-xs text-emerald-600 font-bold mt-1">Kunci: ${j.benar}</p>` : "";
+                container.innerHTML += `
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p class="font-bold text-slate-700 text-sm">${i+1}. ${j.pertanyaan}</p>
+                        <p class="text-blue-600 text-sm mt-2 font-medium bg-white p-2 rounded-lg border">Jawaban: ${j.jawaban}</p>
+                        ${infoPg}
+                    </div>
+                `;
+            });
+            document.getElementById('modalDetail').classList.remove('hidden');
+        };
+
         function loadRiwayat() {
             const q = query(collection(db, "jawaban_murid"), where("idGuru", "==", currentGuruID));
             onSnapshot(q, (sn) => {
                 const b = document.getElementById('tableRiwayatBody');
-                b.innerHTML = sn.empty ? '<tr><td colspan="4" class="p-10 text-center">Belum ada santri...</td></tr>' : "";
-                sn.forEach(d => {
+                b.innerHTML = sn.empty ? '<tr><td colspan="5" class="p-10 text-center">Belum ada santri...</td></tr>' : "";
+                dataJawabanLengkap = [];
+                
+                sn.forEach((d, index) => {
                     const r = d.data();
-                    b.innerHTML += `<tr class="border-b hover:bg-slate-50 transition-all"><td class="p-4 font-bold text-slate-700">${r.namaMurid}</td><td class="p-4 text-center font-medium">${r.kelas}</td><td class="p-4 text-center font-mono font-bold text-blue-600 bg-blue-50 rounded-lg">${r.skor}</td><td class="p-4 text-center"><button class="text-blue-500 font-bold hover:underline">Detail</button></td></tr>`;
+                    dataJawabanLengkap.push(r);
+                    b.innerHTML += `
+                        <tr class="border-b hover:bg-slate-50 transition-all text-slate-700">
+                            <td class="p-4 font-bold">${r.namaMurid}</td>
+                            <td class="p-4 text-center">${r.kelas}</td>
+                            <td class="p-4 font-medium">${r.judulTugas}</td>
+                            <td class="p-4 text-center font-mono font-bold text-blue-600">${r.skor}</td>
+                            <td class="p-4 text-center">
+                                <button onclick="bukaDetail(${index})" class="bg-blue-100 text-blue-600 px-4 py-1 rounded-full font-bold hover:bg-blue-600 hover:text-white transition-all">Detail</button>
+                            </td>
+                        </tr>`;
                 });
             });
         }
