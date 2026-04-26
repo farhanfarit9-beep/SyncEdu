@@ -9,7 +9,6 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        /* Style tambahan untuk tampilan tabel ala Excel */
         .excel-table th { border: 1px solid #e2e8f0; }
         .excel-table td { border: 1px solid #e2e8f0; }
     </style>
@@ -294,7 +293,18 @@
                     const selected = containers[index].querySelector(`input[name="soal_${index}"]:checked`);
                     jaw = selected ? selected.value : "Tidak dijawab";
                     if(jaw === s.pilihan.benar) totalBenar++;
-                    jawabanSiswa.push({ pertanyaan: s.pertanyaan, jawaban: jaw, benar: s.pilihan.benar, tipe: 'pg' });
+                    
+                    // Simpan semua opsi untuk kebutuhan tampilan di Detail Guru nanti
+                    const semuaOpsi = [];
+                    containers[index].querySelectorAll('input[type="radio"]').forEach(inp => semuaOpsi.push(inp.value));
+
+                    jawabanSiswa.push({ 
+                        pertanyaan: s.pertanyaan, 
+                        jawaban: jaw, 
+                        benar: s.pilihan.benar, 
+                        tipe: 'pg',
+                        opsi: semuaOpsi 
+                    });
                 }
             });
 
@@ -381,7 +391,6 @@
             document.getElementById('tabBuatSoal').classList.toggle('hidden', tab !== 'buatSoal');
             document.getElementById('tabRiwayat').classList.toggle('hidden', tab !== 'riwayat');
             
-            // Perbarui warna tombol tab
             if(tab === 'buatSoal') {
                 document.getElementById('btnTabSoal').className = "bg-blue-600 text-white px-6 py-2 rounded-full font-medium shadow-md transition";
                 document.getElementById('btnTabRiwayat').className = "bg-white text-blue-600 border border-blue-600 px-6 py-2 rounded-full font-medium transition";
@@ -395,21 +404,74 @@
             window.open("https://meet.google.com/new", "_blank");
         };
 
-        // PERBAIKAN LOGIKA TOMBOL DETAIL
+        // --- PERBAIKAN LOGIKA MENU DETAIL SESUAI PERMINTAAN ---
         window.bukaDetail = (index) => {
             const data = dataJawabanLengkap[index];
             const container = document.getElementById('isiDetailJawaban');
             container.innerHTML = "";
             
             data.jawaban.forEach((j, i) => {
-                let infoPg = j.tipe === 'pg' ? `<p class="text-xs text-emerald-600 font-bold mt-1">Kunci: ${j.benar}</p>` : "";
-                container.innerHTML += `
-                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                        <p class="font-bold text-slate-700 text-sm">${i+1}. ${j.pertanyaan}</p>
-                        <p class="text-blue-600 text-sm mt-2 font-medium bg-white p-2 rounded-lg border">Jawaban: ${j.jawaban || '(Kosong)'}</p>
-                        ${infoPg}
-                    </div>
-                `;
+                let contentHTML = "";
+
+                if(j.tipe === 'esai') {
+                    // Tampilan Esai: Soal, Jawaban Murid, dan 2 Kotak Ceklis Guru
+                    contentHTML = `
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <p class="font-bold text-slate-700 text-sm">${i+1}. ${j.pertanyaan}</p>
+                                    <p class="text-blue-600 text-sm mt-2 font-medium bg-white p-3 rounded-lg border italic">
+                                        Jawaban Murid: ${j.jawaban || '(Tidak ada jawaban)'}
+                                    </p>
+                                </div>
+                                <div class="flex gap-2 ml-4">
+                                    <button class="w-8 h-8 rounded border-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition flex items-center justify-center font-bold" title="Benar">✓</button>
+                                    <button class="w-8 h-8 rounded border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center font-bold" title="Salah">✕</button>
+                                </div>
+                            </div>
+                        </div>`;
+                } else {
+                    // Tampilan PG: Muncul Soal dan 4 Opsi. Pilihan murid ditandai Hijau (benar) atau Merah (salah)
+                    let opsiHTML = `<div class="grid grid-cols-1 gap-2 mt-3">`;
+                    
+                    // Gunakan opsi yang tersimpan, jika tidak ada fallback ke array sederhana
+                    const listOpsi = j.opsi || [j.jawaban, j.benar]; 
+                    
+                    listOpsi.forEach(opt => {
+                        let bgColor = "bg-white";
+                        let borderStyle = "border-slate-200";
+                        let textColor = "text-slate-700";
+
+                        if(opt === j.jawaban) {
+                            if(j.jawaban === j.benar) {
+                                bgColor = "bg-emerald-500";
+                                textColor = "text-white";
+                                borderStyle = "border-emerald-600";
+                            } else {
+                                bgColor = "bg-red-500";
+                                textColor = "text-white";
+                                borderStyle = "border-red-600";
+                            }
+                        } else if (opt === j.benar) {
+                            // Tandai kunci jawaban jika murid salah pilih
+                            borderStyle = "border-emerald-500 border-2";
+                        }
+
+                        opsiHTML += `
+                            <div class="p-2 px-4 rounded-xl border ${borderStyle} ${bgColor} ${textColor} text-sm font-medium">
+                                ${opt} ${opt === j.benar ? ' <small>(Kunci)</small>' : ''}
+                            </div>`;
+                    });
+                    opsiHTML += `</div>`;
+
+                    contentHTML = `
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <p class="font-bold text-slate-700 text-sm">${i+1}. ${j.pertanyaan}</p>
+                            ${opsiHTML}
+                        </div>`;
+                }
+                
+                container.innerHTML += contentHTML;
             });
             document.getElementById('modalDetail').classList.remove('hidden');
         };
@@ -425,7 +487,7 @@
                 sn.forEach((d) => {
                     const r = d.data();
                     dataJawabanLengkap.push(r);
-                    const currentIndex = i; // Lock index untuk button
+                    const currentIndex = i; 
                     b.innerHTML += `
                         <tr class="hover:bg-blue-50 transition-all text-slate-700">
                             <td class="p-3 border font-bold">${r.namaMurid}</td>
