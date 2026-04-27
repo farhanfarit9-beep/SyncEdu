@@ -30,15 +30,66 @@
                 </div>
                 <span class="text-xl font-extrabold tracking-tight text-slate-800 uppercase italic">SyncEdu</span>
             </div>
-            <div id="userInfo" class="hidden flex items-center gap-4">
+            <div id="userInfo" class="hidden flex items-center gap-3">
                 <span id="userNameDisp" class="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full"></span>
-                <button onclick="location.reload()" class="text-red-500 hover:text-red-700 text-sm font-bold">Keluar</button>
+                <button onclick="toggleSettings()" class="p-2 hover:bg-slate-100 rounded-full transition text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+                <button onclick="location.reload()" class="text-red-500 hover:text-red-700 text-sm font-bold ml-2">Keluar</button>
             </div>
         </div>
     </nav>
 
+    <div id="modalSettings" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h3 class="text-xl font-black text-slate-800 uppercase italic">Pengaturan Sistem</h3>
+                <button onclick="toggleSettings()" class="text-slate-400 hover:text-red-500 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-8">
+                <section>
+                    <h4 class="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Profil & Akun</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-600 mb-1">Nama Tampilan</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="set_newName" class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                <button onclick="updateProfileName()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm">Simpan</button>
+                            </div>
+                        </div>
+                        <button onclick="location.reload()" class="w-full py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50">Ganti Akun (Logout)</button>
+                    </div>
+                </section>
+
+                <section>
+                    <h4 class="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Bahasa</h4>
+                    <select class="w-full p-3 border rounded-xl outline-none bg-slate-50 font-semibold text-slate-700">
+                        <option value="id">Bahasa Indonesia</option>
+                        <option value="en">English (Coming Soon)</option>
+                        <option value="ar">العربية (Coming Soon)</option>
+                    </select>
+                </section>
+
+                <section>
+                    <h4 class="text-xs font-black text-red-600 uppercase tracking-widest mb-4">Manajemen File & Riwayat</h4>
+                    <div class="space-y-3">
+                        <div class="p-4 bg-red-50 border border-red-100 rounded-2xl">
+                            <p class="text-xs font-bold text-red-800 mb-3">Pilih data untuk dihapus secara permanen dari database:</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="cleanUpData('tugas')" class="bg-white border border-red-200 text-red-600 p-3 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition">Hapus Semua File Soal</button>
+                                <button onclick="cleanUpData('jawaban_murid')" class="bg-white border border-red-200 text-red-600 p-3 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition">Hapus Semua File Jawaban</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto p-4 max-w-4xl">
-        
         <div id="landingSection" class="mt-20 text-center animate-fade-in">
             <div class="mb-12 flex flex-col items-center">
                 <div class="bg-gradient-to-br from-blue-600 to-cyan-500 p-6 rounded-3xl text-white shadow-2xl mb-6 transform -rotate-2">
@@ -194,8 +245,7 @@
                 <h3 class="text-xl font-black text-slate-800 uppercase italic">Pilih Soal untuk Dicetak</h3>
                 <button onclick="document.getElementById('modalPrint').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-3xl leading-none">&times;</button>
             </div>
-            <div id="daftarSoalPrint" class="p-6 max-h-[60vh] overflow-y-auto space-y-3">
-                </div>
+            <div id="daftarSoalPrint" class="p-6 max-h-[60vh] overflow-y-auto space-y-3"></div>
         </div>
     </div>
 
@@ -203,10 +253,10 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // KODE FIREBASE (TIDAK DIUBAH SAMA SEKALI)
+        // KODE FIREBASE (TIDAK DIUBAH)
         const firebaseConfig = {
             apiKey: "AIzaSyBQp9Olce8JK6Y8DmjJo8zkR_1XJri8Yco",
             authDomain: "farhan-34b24.firebaseapp.com",
@@ -228,6 +278,49 @@
         let tugasAktif = null;
         let dataJawabanLengkap = []; 
         let activeDetailIndex = null;
+
+        // --- FUNGSI BARU UNTUK PENGATURAN ---
+        window.toggleSettings = () => {
+            const modal = document.getElementById('modalSettings');
+            modal.classList.toggle('hidden');
+            if(!modal.classList.contains('hidden')) {
+                document.getElementById('set_newName').value = auth.currentUser.displayName;
+            }
+        };
+
+        window.updateProfileName = async () => {
+            const newName = document.getElementById('set_newName').value;
+            if(!newName) return;
+            try {
+                await updateProfile(auth.currentUser, { displayName: newName });
+                document.getElementById('userNameDisp').innerText = newName;
+                alert("Nama profil berhasil diperbarui!");
+            } catch (e) {
+                alert("Gagal memperbarui nama: " + e.message);
+            }
+        };
+
+        window.cleanUpData = async (targetCollection) => {
+            const confirmMsg = targetCollection === 'tugas' 
+                ? "Hapus SEMUA file soal yang pernah Anda buat secara permanen?" 
+                : "Hapus SEMUA riwayat jawaban murid secara permanen?";
+            
+            if(!confirm(confirmMsg)) return;
+
+            try {
+                const q = query(collection(db, targetCollection), where("guruId", "==", currentGuruID));
+                const snapshot = await getDocs(q);
+                
+                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, targetCollection, d.id)));
+                await Promise.all(deletePromises);
+                
+                alert(`Semua data pada ${targetCollection} berhasil dihapus permanen!`);
+                toggleSettings();
+            } catch (e) {
+                alert("Gagal menghapus data: " + e.message);
+            }
+        };
+        // ------------------------------------
 
         window.showLogin = (role) => {
             document.getElementById('landingSection').classList.add('hidden');
@@ -424,7 +517,6 @@
             }
         };
 
-        // TAMBAHAN: Fungsi Buka Modal Print
         window.bukaModalPrint = async () => {
             const q = query(collection(db, "tugas"), where("guruId", "==", currentGuruID));
             const querySnapshot = await getDocs(q);
@@ -442,7 +534,6 @@
             document.getElementById('modalPrint').classList.remove('hidden');
         };
 
-        // TAMBAHAN: Fungsi Proses Cetak
         window.prosesCetak = (soal, judul) => {
             const printArea = document.getElementById('printArea');
             let content = `<div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
@@ -587,7 +678,6 @@
             b.innerHTML = dataJawabanLengkap.length === 0 ? '<tr><td colspan="6" class="p-10 text-center">Belum ada data...</td></tr>' : "";
             
             dataJawabanLengkap.forEach((r, idx) => {
-                // PERBAIKAN: Format Tanggal, Bulan, Tahun, Jam, Menit
                 const d = r.waktuSelesai ? r.waktuSelesai.toDate() : new Date();
                 const tgl = d.getDate().toString().padStart(2, '0');
                 const bln = (d.getMonth() + 1).toString().padStart(2, '0');
