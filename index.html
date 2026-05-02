@@ -5,27 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyncEdu - Synchronized Education</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f8fafc;
-        }
-        .glass { 
-            background: rgba(255, 255, 255, 0.8); 
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .logo-gradient {
-            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
-        }
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .excel-table th { border: 1px solid #e2e8f0; }
+        .excel-table td { border: 1px solid #e2e8f0; }
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
@@ -33,114 +18,24 @@
         }
     </style>
 </head>
-<body class="min-h-screen text-slate-900">
+<body class="bg-slate-50 min-h-screen">
 
-    <!-- Navbar Modern -->
-    <nav class="sticky top-0 z-50 border-b border-slate-200/60 glass">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="logo-gradient p-2.5 rounded-xl text-white shadow-lg shadow-blue-200">
+    <nav class="bg-white/80 sticky top-0 z-50 border-b border-slate-200 glass">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
-                <div class="flex flex-col">
-                    <span class="text-xl font-extrabold tracking-tight text-slate-900 leading-none">SyncEdu</span>
-                    <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">Education Platform</span>
-                </div>
+                <span class="text-xl font-extrabold tracking-tight text-slate-800 uppercase italic">SyncEdu</span>
             </div>
-            <div id="userInfo" class="hidden flex items-center gap-4">
-                <div class="flex flex-col items-end">
-                    <span id="userNameDisp" class="text-sm font-bold text-slate-700"></span>
-                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Verified Teacher</span>
-                </div>
-                <button onclick="toggleSettings()" class="p-2 hover:bg-slate-100 rounded-xl transition text-slate-500 border border-transparent hover:border-slate-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div id="userInfo" class="hidden flex items-center gap-3">
+                <span id="userNameDisp" class="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full"></span>
+                <button onclick="toggleSettings()" class="p-2 hover:bg-slate-100 rounded-full transition text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                </button>
-                <div class="h-8 w-[1px] bg-slate-200"></div>
-                <button onclick="location.reload()" class="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all" data-i18n="exit">Keluar</button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Modal Settings -->
-    <div id="modalSettings" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
-        <div class="bg-white w-full max-w-xl max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col border border-slate-100">
-            <div class="flex justify-between items-center p-8 border-b border-slate-50">
-                <h3 class="text-xl font-bold text-slate-800" data-i18n="sysSettings">Pengaturan Sistem</h3>
-                <button onclick="toggleSettings()" class="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-full text-slate-400 hover:text-rose-500 transition-all">&times;</button>
-            </div>
-            <div class="p-8 overflow-y-auto space-y-8">
-                <section>
-                    <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4" data-i18n="profileAccount">Profil & Akun</h4>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-2" data-i18n="displayName">Nama Tampilan</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="set_newName" class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
-                                <button onclick="updateProfileName()" class="bg-blue-600 text-white px-6 py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all" data-i18n="save">Simpan</button>
-                            </div>
-                        </div>
-                        <button onclick="location.reload()" class="w-full py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all" data-i18n="logout">Ganti Akun (Logout)</button>
-                    </div>
-                </section>
-
-                <section>
-                    <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4" data-i18n="language">Bahasa Sistem</h4>
-                    <select id="langSelect" onchange="changeLanguage(this.value)" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer hover:border-blue-400 transition-all">
-                        <option value="id">🇮🇩 Bahasa Indonesia</option>
-                        <option value="en">🇺🇸 English</option>
-                        <option value="ar">🇸🇦 العربية</option>
-                    </select>
-                </section>
-
-                <section>
-                    <h4 class="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-4" data-i18n="fileManagement">Database & Cleanup</h4>
-                    <div class="p-5 bg-rose-50 border border-rose-100 rounded-[1.5rem]">
-                        <p class="text-[11px] font-bold text-rose-800 mb-4 opacity-80" data-i18n="deleteSelect">Hapus data secara permanen dari server:</p>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="bukaModalHapus('tugas')" class="bg-white border border-rose-200 text-rose-600 p-3.5 rounded-xl text-xs font-bold hover:bg-rose-600 hover:text-white transition-all" data-i18n="delAllSoal">Hapus File Soal</button>
-                            <button onclick="bukaModalHapus('jawaban_murid')" class="bg-white border border-rose-200 text-rose-600 p-3.5 rounded-xl text-xs font-bold hover:bg-rose-600 hover:text-white transition-all" data-i18n="delAllJwb">Hapus Jawaban</button>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Hapus -->
-    <div id="modalHapusSpesifik" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
-            <div class="flex justify-between items-center p-8 border-b">
-                <h3 id="judulModalHapus" class="text-xl font-bold text-slate-800">Pilih Data</h3>
-                <button onclick="document.getElementById('modalHapusSpesifik').classList.add('hidden')" class="text-slate-400 hover:text-rose-500 text-3xl leading-none">&times;</button>
-            </div>
-            <div id="listHapusSpesifik" class="p-6 max-h-[60vh] overflow-y-auto space-y-3 bg-slate-50"></div>
-        </div>
-    </div>
-
-    <div class="container mx-auto p-6 max-w-4xl">
-        
-        <!-- Hero Section -->
-        <div id="landingSection" class="mt-16 text-center animate-fade-in">
-            <div class="mb-12 flex flex-col items-center">
-                <div class="logo-gradient p-7 rounded-[2rem] text-white shadow-2xl shadow-blue-200 mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                </div>
-                <h1 class="text-6xl font-extrabold tracking-tighter text-slate-900 mb-2">SyncEdu</h1>
-                <p class="text-blue-600 font-black tracking-[0.4em] uppercase text-[10px] bg-blue-50 px-5 py-1.5 rounded-full inline-block">Synchronized Education System</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                <button onclick="showLogin('guru')" class="bg-white p-10 rounded-[2.5rem] border border-slate-100 card-hover group">
-                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 mx-auto group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1mNormally I can help with things like this, but I don't seem to have access to that content. You can try again or ask me for something else.
                     </svg>
                 </button>
                 <button onclick="location.reload()" class="text-red-500 hover:text-red-700 text-sm font-bold ml-2" data-i18n="exit">Keluar</button>
