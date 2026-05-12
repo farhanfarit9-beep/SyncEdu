@@ -6,7 +6,6 @@
     <title>EduSmart - Platform Pendidikan Digital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-react/0.263.1/lucide-react.min.js"></script>
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
@@ -18,7 +17,7 @@
         .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; }
         .btn-ai { background-color: #9333ea; transition: all 0.2s; }
         .btn-ai:hover { background-color: #7e22ce; }
-        @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body>
@@ -44,32 +43,29 @@
             </div>
 
             <div class="space-y-4">
-                <input type="text" id="student-name" placeholder="Nama Lengkap Anda" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="text" id="student-name" placeholder="Nama Lengkap Murid" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                 <input type="text" id="teacher-id-input" placeholder="ID Guru (W01S...)" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                 <button onclick="loginAsStudent()" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">Masuk Sekarang</button>
             </div>
         </div>
     </div>
 
-    <!-- Header (Foto 2 Style) -->
+    <!-- Header -->
     <header id="main-header" class="hidden bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30">
         <div class="flex items-center gap-3">
             <div class="bg-indigo-600 p-1.5 rounded text-white"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>
-            <h1 class="text-xl font-bold text-slate-800" id="header-portal-name">Teacher Portal</h1>
+            <h1 class="text-xl font-bold text-slate-800" id="header-portal-name">Portal</h1>
         </div>
         <div class="flex items-center gap-4">
             <div class="text-right">
                 <p class="text-sm font-bold text-slate-800 leading-none" id="user-display-name">...</p>
                 <p class="text-[10px] text-slate-400 font-mono mt-1" id="user-display-id">ID: ...</p>
             </div>
-            <button onclick="logout()" class="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors">
-                <i data-lucide="power" class="w-5 h-5"></i>
-            </button>
         </div>
     </header>
 
     <div class="flex flex-1">
-        <!-- Sidebar (Foto 2 Style) -->
+        <!-- Sidebar -->
         <aside id="sidebar" class="hidden sidebar w-64 fixed h-[calc(100vh-4rem)] p-4 space-y-2 no-print">
             <button onclick="showSection('home')" id="nav-home" class="nav-link w-full text-left p-3 rounded-xl flex items-center gap-3 text-slate-600 hover:bg-slate-200">
                 <i data-lucide="home" class="w-5 h-5"></i> Beranda
@@ -82,14 +78,12 @@
                 <button onclick="showSection('student-results')" id="nav-student-results" class="nav-link w-full text-left p-3 rounded-xl flex items-center gap-3 text-slate-600 hover:bg-slate-200">
                     <i data-lucide="file-text" class="w-5 h-5"></i> Hasil Kerja Murid
                 </button>
-                <button onclick="openGoogleMeet()" class="w-full text-left p-3 rounded-xl flex items-center gap-3 text-green-600 hover:bg-green-50">
+                <a href="https://meet.google.com" target="_blank" class="w-full text-left p-3 rounded-xl flex items-center gap-3 text-green-600 hover:bg-green-50">
                     <i data-lucide="video" class="w-5 h-5"></i> Zoom / Google Meet
-                </button>
+                </a>
                 
                 <div class="pt-6 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Riwayat Soal Saya</div>
-                <div id="archive-list-sidebar" class="space-y-1 overflow-y-auto max-h-48 text-xs">
-                    <!-- Dinamis -->
-                </div>
+                <div id="archive-list-sidebar" class="space-y-1 overflow-y-auto max-h-48 text-xs"></div>
             </div>
 
             <div id="student-nav" class="hidden space-y-2">
@@ -99,12 +93,11 @@
             </div>
         </aside>
 
-        <!-- Content -->
+        <!-- Content Area -->
         <main id="main-content" class="flex-1 md:ml-64 p-6 overflow-y-auto">
-            <!-- Toast Message -->
             <div id="toast" class="hidden fixed top-20 right-6 z-50 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce"></div>
 
-            <!-- Dashboard Home -->
+            <!-- Section: Beranda -->
             <section id="section-home" class="space-y-6">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-bold text-slate-800">Ringkasan Aktivitas</h2>
@@ -112,7 +105,7 @@
                         <i data-lucide="share-2" class="w-4 h-4"></i> Bagikan ID Guru
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="teacher-stats">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="card p-6 border-l-4 border-indigo-500">
                         <p class="text-slate-400 text-xs font-bold uppercase mb-1">Total Tugas</p>
                         <h3 class="text-3xl font-bold" id="stat-tasks">0</h3>
@@ -128,133 +121,107 @@
                 </div>
             </section>
 
-            <!-- Section Create Task (Foto 2 Style) -->
+            <!-- Section: Buat Tugas -->
             <section id="section-create-task" class="hidden space-y-6">
                 <div class="card p-8 space-y-8">
-                    <h3 class="text-xl font-bold border-b pb-4">Informasi Mata Pelajaran</h3>
+                    <h3 class="text-xl font-bold border-b pb-4">Konfigurasi Tugas</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-2">
-                            <label class="text-sm font-medium text-slate-500">Mata Pelajaran (Contoh: PAI)</label>
-                            <input type="text" id="task-subject" placeholder="Mata Pelajaran" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="text-sm font-medium text-slate-500">Mata Pelajaran</label>
+                            <input type="text" id="task-subject" placeholder="Contoh: Matematika" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div class="space-y-2">
-                            <label class="text-sm font-medium text-slate-500">Kelas (Contoh: 6C)</label>
-                            <input type="text" id="task-class" placeholder="Kelas" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="text-sm font-medium text-slate-500">Kelas</label>
+                            <input type="text" id="task-class" placeholder="Contoh: VII-A" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm font-medium text-slate-500">Judul Tugas</label>
-                            <input type="text" id="task-title" placeholder="Judul Tugas" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="task-title" placeholder="Contoh: UTS Semester 1" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
 
-                    <button onclick="generateAIQuestions()" id="ai-btn" class="w-full py-4 btn-ai text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-purple-100">
+                    <button onclick="generateAIQuestions()" id="ai-btn" class="w-full py-4 btn-ai text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg">
                         <i data-lucide="bot" class="w-6 h-6"></i> 
-                        <span id="ai-btn-text">Buat Tugas Otomatis AI (Gemini)</span>
+                        <span id="ai-btn-text">Gunakan AI Gemini (Otomatis)</span>
                     </button>
 
                     <div class="pt-8 border-t space-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-lg font-bold">Input Soal Manual</h3>
-                            <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">Soal dalam antrean: <span id="q-count">0</span></span>
+                            <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">Total: <span id="q-count">0</span> soal</span>
                         </div>
-
                         <select id="q-type" onchange="toggleQType()" class="w-full p-3 border rounded-xl outline-none">
                             <option value="pg">Pilihan Ganda (PG)</option>
                             <option value="esai">Esai</option>
                         </select>
-
-                        <textarea id="q-text" rows="3" placeholder="Tulis soal di sini..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-
+                        <textarea id="q-text" rows="3" placeholder="Tulis butir soal..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                         <div id="pg-options-area" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" id="opt-a" placeholder="Opsi A" class="p-3 border rounded-lg">
                             <input type="text" id="opt-b" placeholder="Opsi B" class="p-3 border rounded-lg">
                             <input type="text" id="opt-c" placeholder="Opsi C" class="p-3 border rounded-lg">
                             <input type="text" id="opt-d" placeholder="Opsi D" class="p-3 border rounded-lg">
                             <div class="md:col-span-2 flex items-center gap-3">
-                                <label class="text-sm font-bold">Jawaban Benar:</label>
+                                <label class="text-sm font-bold">Kunci Jawaban:</label>
                                 <select id="correct-ans" class="p-2 border rounded">
                                     <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
                                 </select>
                             </div>
                         </div>
-
                         <div class="flex gap-4 pt-4">
-                            <button onclick="addQuestionToTemp()" class="flex-1 py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50">
-                                <i data-lucide="plus-circle"></i> Tambah Soal
-                            </button>
-                            <button onclick="saveAllQuestions()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700">
-                                <i data-lucide="save"></i> Simpan & Publikasikan
-                            </button>
+                            <button onclick="addQuestionToTemp()" class="flex-1 py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold">Tambah ke List</button>
+                            <button onclick="saveAllQuestions()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">Simpan & Terbitkan</button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Section Student Results -->
-            <section id="section-student-results" class="hidden space-y-6">
-                <div class="card p-6">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
-                        <h3 class="text-xl font-bold">Tabel Hasil Kerja Murid</h3>
-                        <div class="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border">
-                            <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-2"></i>
-                            <input type="date" id="filter-date" onchange="filterResults()" class="bg-transparent outline-none text-sm">
-                            <button onclick="resetTableFilter()" class="text-indigo-600 font-bold text-xs px-3 hover:underline">SEMUANYA</button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest border-b">
-                                    <th class="pb-4 px-2">Nama Murid</th>
-                                    <th class="pb-4 px-2">Mata Pelajaran</th>
-                                    <th class="pb-4 px-2">Total Soal</th>
-                                    <th class="pb-4 px-2">Waktu Pengerjaan</th>
-                                    <th class="pb-4 px-2">Nilai Akhir</th>
-                                    <th class="pb-4 px-2 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="results-table" class="divide-y text-sm">
-                                <!-- Dinamis -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Section Student: Kerjakan Tugas -->
+            <!-- Section: Kerjakan Tugas (Murid) -->
             <section id="section-do-task" class="hidden space-y-6">
                 <div id="student-task-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-                <div id="student-exam-area" class="hidden card p-8 space-y-8 max-w-4xl mx-auto shadow-2xl border-indigo-200"></div>
+                <div id="student-exam-area" class="hidden card p-8 space-y-8 max-w-4xl mx-auto shadow-2xl"></div>
+            </section>
+
+            <!-- Section: Hasil Kerja (Guru) -->
+            <section id="section-student-results" class="hidden space-y-6">
+                <div class="card p-6 overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 font-bold uppercase">
+                            <tr>
+                                <th class="p-4">Nama Murid</th>
+                                <th class="p-4">Pelajaran</th>
+                                <th class="p-4">Judul</th>
+                                <th class="p-4">Nilai</th>
+                                <th class="p-4">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table"></tbody>
+                    </table>
+                </div>
             </section>
         </main>
     </div>
 
-    <!-- Modal Penilaian (Evaluasi) -->
+    <!-- Modal Penilaian -->
     <div id="modal-grading" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
         <div class="bg-white w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="p-6 bg-slate-50 border-b flex justify-between items-center">
-                <h3 class="text-xl font-bold">Evaluasi & Penilaian</h3>
-                <button onclick="closeModal()" class="p-2 hover:bg-slate-200 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
             <div id="grading-body" class="p-8 overflow-y-auto space-y-8"></div>
             <div class="p-6 bg-slate-50 border-t flex justify-end gap-3">
-                <button onclick="closeModal()" class="px-6 py-2 rounded-xl font-bold text-slate-500">Batal</button>
-                <button onclick="submitFinalGrade()" class="px-8 py-2 bg-indigo-600 text-white rounded-xl font-bold">Simpan & Selesai</button>
+                <button onclick="closeModal()" class="px-6 py-2 rounded-xl font-bold text-slate-500">Tutup</button>
+                <button onclick="submitFinalGrade()" class="px-8 py-2 bg-indigo-600 text-white rounded-xl font-bold">Simpan Nilai</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- CONFIG ---
+    // Firebase Config (Tetap sama)
     const firebaseConfig = {
         apiKey: "AIzaSyBQp9Olce8JK6Y8DmjJo8zkR_1XJri8Yco",
         authDomain: "farhan-34b24.firebaseapp.com",
         projectId: "farhan-34b24",
         storageBucket: "farhan-34b24.firebasestorage.app",
         messagingSenderId: "692021812815",
-        appId: "1:692021812815:web:60cf37c47d6cb06dd6543a",
-        measurementId: "G-C5BZB3N081"
+        appId: "1:692021812815:web:60cf37c47d6cb06dd6543a"
     };
 
     const GEMINI_API_KEY = "AIzaSyBHkB-ORUOBh49KEl_2SVPMIxkDCCttReE";
@@ -267,29 +234,24 @@
     let userRole = null;
     let currentUser = null;
     let tempQuestions = [];
-    let currentGradingDocId = null;
+    let currentGradingId = null;
 
-    // --- LOGIC AUTH ---
+    // LOGIN LOGIC
     async function loginAsTeacher() {
         try {
             const res = await auth.signInWithPopup(provider);
             currentUser = res.user;
             userRole = 'teacher';
-            localStorage.setItem('edu_role', 'teacher');
             initDashboard();
-        } catch (e) { toast("Gagal login Google"); }
+        } catch (e) { alert("Gagal login: " + e.message); }
     }
 
     function loginAsStudent() {
         const name = document.getElementById('student-name').value;
         const tid = document.getElementById('teacher-id-input').value;
-        if (!name || !tid) return toast("Isi nama dan ID Guru!");
-
+        if (!name || !tid) return alert("Isi nama dan ID Guru!");
         currentUser = { uid: 'std_' + Date.now(), displayName: name, teacherId: tid };
         userRole = 'student';
-        localStorage.setItem('edu_role', 'student');
-        localStorage.setItem('std_name', name);
-        localStorage.setItem('std_tid', tid);
         initDashboard();
     }
 
@@ -297,103 +259,47 @@
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-header').classList.remove('hidden');
         document.getElementById('sidebar').classList.remove('hidden');
-        
         document.getElementById('user-display-name').innerText = currentUser.displayName;
-        document.getElementById('user-display-id').innerText = userRole === 'teacher' ? `ID: ${currentUser.uid}` : `Guru: ${currentUser.teacherId}`;
-
+        document.getElementById('user-display-id').innerText = userRole === 'teacher' ? `ID: ${currentUser.uid}` : `ID Guru: ${currentUser.teacherId}`;
+        
         if (userRole === 'teacher') {
             document.getElementById('teacher-nav').classList.remove('hidden');
-            document.getElementById('header-portal-name').innerText = "Teacher Portal";
+            document.getElementById('header-portal-name').innerText = "Dashboard Guru";
             showSection('home');
             updateTeacherStats();
             loadSidebarArchive();
         } else {
             document.getElementById('student-nav').classList.remove('hidden');
-            document.getElementById('teacher-stats').classList.add('hidden');
-            document.getElementById('header-portal-name').innerText = "Student Portal";
+            document.getElementById('header-portal-name').innerText = "Portal Murid";
             showSection('do-task');
         }
         lucide.createIcons();
     }
 
+    // NAVIGATION
     function showSection(id) {
         document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
         document.getElementById('section-' + id).classList.remove('hidden');
-        
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('nav-active'));
-        const activeNav = document.getElementById('nav-' + id);
-        if (activeNav) activeNav.classList.add('nav-active');
-
+        const nav = document.getElementById('nav-' + id);
+        if (nav) nav.classList.add('nav-active');
+        
         if (id === 'student-results') loadResultsTable();
-        if (id === 'do-task' && userRole === 'student') loadAvailableTasks();
+        if (id === 'do-task') loadAvailableTasks();
     }
 
-    // --- TEACHER: CREATE TASK ---
-    function toggleQType() {
-        document.getElementById('pg-options-area').classList.toggle('hidden', document.getElementById('q-type').value === 'esai');
-    }
-
-    function addQuestionToTemp() {
-        const type = document.getElementById('q-type').value;
-        const text = document.getElementById('q-text').value;
-        if (!text) return toast("Soal tidak boleh kosong!");
-
-        let q = { type, text, id: Date.now() };
-        if (type === 'pg') {
-            q.options = {
-                A: document.getElementById('opt-a').value,
-                B: document.getElementById('opt-b').value,
-                C: document.getElementById('opt-c').value,
-                D: document.getElementById('opt-d').value
-            };
-            q.correct = document.getElementById('correct-ans').value;
-        }
-
-        tempQuestions.push(q);
-        document.getElementById('q-count').innerText = tempQuestions.length;
-        document.getElementById('q-text').value = "";
-        toast("Soal ditambahkan ke antrean");
-    }
-
-    async function saveAllQuestions() {
-        const subj = document.getElementById('task-subject').value;
-        const cls = document.getElementById('task-class').value;
-        const title = document.getElementById('task-title').value;
-
-        if (tempQuestions.length === 0) return toast("Buat minimal 1 soal!");
-        if (!subj || !cls || !title) return toast("Lengkapi info mata pelajaran!");
-
-        try {
-            await db.collection('tasks').add({
-                teacherId: currentUser.uid,
-                subject: subj,
-                class: cls,
-                title: title,
-                questions: tempQuestions,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                dateLabel: new Date().toLocaleDateString('id-ID')
-            });
-            toast("Tugas berhasil dipublikasi!");
-            tempQuestions = [];
-            document.getElementById('q-count').innerText = 0;
-            showSection('home');
-            updateTeacherStats();
-            loadSidebarArchive();
-        } catch (e) { toast("Error menyimpan tugas"); }
-    }
-
-    // --- AI GEMINI (PERBAIKAN ERROR PARSING) ---
+    // AI GEMINI INTEGRATION
     async function generateAIQuestions() {
         const subj = document.getElementById('task-subject').value;
         const cls = document.getElementById('task-class').value;
-        if (!subj || !cls) return toast("Isi Mata Pelajaran & Kelas!");
+        if (!subj || !cls) return toast("Mata Pelajaran & Kelas wajib diisi!");
 
         const btn = document.getElementById('ai-btn');
         const txt = document.getElementById('ai-btn-text');
         btn.disabled = true;
-        txt.innerText = "Gemini sedang berpikir...";
+        txt.innerText = "Memproses Soal via Gemini...";
 
-        const prompt = `Berikan saya 5 soal untuk ${subj} kelas ${cls}. Kembalikan HANYA array JSON murni tanpa markdown, tanpa kata-kata lain. Struktur: [{"type":"pg","text":"Soal...","options":{"A":"opsi1","B":"opsi2","C":"opsi3","D":"opsi4"},"correct":"A"},{"type":"esai","text":"Soal esai..."}]`;
+        const prompt = `Berikan 5 soal ${subj} untuk kelas ${cls}. Kembalikan HANYA format JSON ARRAY murni. Skema: [{"type":"pg","text":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A"},{"type":"esai","text":"..."}]`;
 
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -405,240 +311,289 @@
             const data = await response.json();
             let rawText = data.candidates[0].content.parts[0].text;
             
-            // Perbaikan regex untuk memastikan JSON bersih dari ```json ... ```
-            const cleanJson = rawText.replace(/```json|```/g, "").trim();
-            const aiQuestions = JSON.parse(cleanJson);
+            // Perbaikan: Bersihkan teks dari format markdown agar JSON.parse tidak error
+            const jsonStr = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+            const questions = JSON.parse(jsonStr);
 
-            tempQuestions = [...tempQuestions, ...aiQuestions];
+            tempQuestions = [...tempQuestions, ...questions];
             document.getElementById('q-count').innerText = tempQuestions.length;
-            toast("AI berhasil menambahkan " + aiQuestions.length + " soal!");
+            toast("AI berhasil menambahkan " + questions.length + " soal!");
         } catch (e) {
             console.error(e);
-            toast("Gagal AI: Format respons tidak valid");
+            toast("Pesan: Terjadi kendala format AI, coba lagi.");
         } finally {
             btn.disabled = false;
-            txt.innerText = "Buat Tugas Otomatis AI (Gemini)";
+            txt.innerText = "Gunakan AI Gemini (Otomatis)";
         }
     }
 
-    // --- STUDENT LOGIC ---
+    // MANUAL TASK LOGIC
+    function toggleQType() {
+        document.getElementById('pg-options-area').classList.toggle('hidden', document.getElementById('q-type').value === 'esai');
+    }
+
+    function addQuestionToTemp() {
+        const type = document.getElementById('q-type').value;
+        const text = document.getElementById('q-text').value;
+        if (!text) return toast("Isi soal terlebih dahulu!");
+        
+        let q = { type, text, id: Date.now() };
+        if (type === 'pg') {
+            q.options = { 
+                A: document.getElementById('opt-a').value, 
+                B: document.getElementById('opt-b').value, 
+                C: document.getElementById('opt-c').value, 
+                D: document.getElementById('opt-d').value 
+            };
+            q.correct = document.getElementById('correct-ans').value;
+        }
+        tempQuestions.push(q);
+        document.getElementById('q-count').innerText = tempQuestions.length;
+        document.getElementById('q-text').value = "";
+        toast("Soal ditambahkan ke daftar.");
+    }
+
+    async function saveAllQuestions() {
+        const subj = document.getElementById('task-subject').value;
+        const cls = document.getElementById('task-class').value;
+        const title = document.getElementById('task-title').value;
+        if (!subj || !cls || !title || tempQuestions.length === 0) return toast("Lengkapi data dan soal!");
+
+        try {
+            await db.collection('tasks').add({
+                teacherId: currentUser.uid,
+                subject: subj,
+                class: cls,
+                title: title,
+                questions: tempQuestions,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            toast("Tugas berhasil diterbitkan!");
+            tempQuestions = [];
+            document.getElementById('q-count').innerText = 0;
+            showSection('home');
+            updateTeacherStats();
+            loadSidebarArchive();
+        } catch(e) { toast("Error simpan: " + e.message); }
+    }
+
+    // STUDENT TASK LOGIC
     async function loadAvailableTasks() {
         const grid = document.getElementById('student-task-grid');
-        grid.innerHTML = '<p class="col-span-full text-center py-10">Mencari tugas dari Guru...</p>';
+        grid.innerHTML = "<p class='col-span-2 text-center text-slate-400'>Mencari tugas...</p>";
         
         try {
             const snap = await db.collection('tasks').where('teacherId', '==', currentUser.teacherId).get();
             grid.innerHTML = "";
-            if (snap.empty) grid.innerHTML = '<p class="col-span-full text-center py-10">Belum ada tugas untuk Anda.</p>';
+            if (snap.empty) grid.innerHTML = "<p class='col-span-2 text-center text-slate-400'>Tidak ada tugas dari ID Guru ini.</p>";
             
             snap.forEach(doc => {
                 const t = doc.data();
-                const div = document.createElement('div');
-                div.className = "card p-6 border-l-8 border-indigo-600 hover:shadow-xl cursor-pointer transition-all";
-                div.onclick = () => openTaskForStudent(doc.id, t);
-                div.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full uppercase">${t.class}</span>
-                            <h4 class="text-xl font-bold mt-2">${t.title}</h4>
-                            <p class="text-slate-500 text-sm">${t.subject}</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="text-slate-300"></i>
+                const d = document.createElement('div');
+                d.className = "card p-6 border-l-8 border-indigo-600 hover:shadow-lg transition-all cursor-pointer";
+                d.onclick = () => openTaskForStudent(doc.id, t);
+                d.innerHTML = `
+                    <h4 class="text-xl font-bold text-slate-800">${t.title}</h4>
+                    <p class="text-slate-500 mt-1">${t.subject} • Kelas ${t.class}</p>
+                    <div class="mt-4 flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wide">
+                        <i data-lucide="play" class="w-3 h-3"></i> Mulai Kerjakan
                     </div>
                 `;
-                grid.appendChild(div);
+                grid.appendChild(d);
             });
             lucide.createIcons();
-        } catch (e) { toast("Error memuat tugas"); }
+        } catch(e) { console.error(e); }
     }
 
     function openTaskForStudent(id, task) {
         document.getElementById('student-task-grid').classList.add('hidden');
         const area = document.getElementById('student-exam-area');
         area.classList.remove('hidden');
-
-        let html = `<div class="border-b pb-6"><h2 class="text-3xl font-bold">${task.title}</h2><p class="text-slate-400">${task.subject} | Kelas ${task.class}</p></div>`;
         
-        task.questions.forEach((q, idx) => {
-            html += `<div class="space-y-4">
-                <p class="font-bold text-lg"><span class="text-indigo-600">Soal ${idx+1}:</span> ${q.text}</p>`;
-            
-            if (q.type === 'pg') {
-                ['A','B','C','D'].forEach(opt => {
-                    html += `
-                        <label class="flex items-center gap-4 p-4 border rounded-2xl hover:bg-slate-50 cursor-pointer transition-all border-slate-200">
-                            <input type="radio" name="ans-${idx}" value="${opt}" class="w-5 h-5 text-indigo-600">
-                            <span class="font-medium text-slate-700">${opt}. ${q.options[opt]}</span>
-                        </label>`;
-                });
-            } else {
-                html += `<textarea name="ans-${idx}" rows="4" class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ketik jawaban esai Anda..."></textarea>`;
-            }
-            html += `</div>`;
-        });
-
-        html += `<button onclick="submitStudentWork('${id}')" class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-bold text-xl shadow-xl hover:bg-indigo-700">Kirim Jawaban Sekarang</button>`;
-        area.innerHTML = html;
-    }
-
-    async function submitStudentWork(taskId) {
-        const answers = [];
-        const taskSnap = await db.collection('tasks').doc(taskId).get();
-        const task = taskSnap.data();
-
-        task.questions.forEach((q, i) => {
-            let val = "";
-            if (q.type === 'pg') {
-                const sel = document.querySelector(`input[name="ans-${i}"]:checked`);
-                val = sel ? sel.value : "";
-            } else {
-                val = document.querySelector(`textarea[name="ans-${i}"]`).value;
-            }
-            answers.push({ qId: q.id, type: q.type, val: val });
-        });
-
-        try {
-            await db.collection('submissions').add({
-                taskId,
-                teacherId: currentUser.teacherId,
-                studentName: currentUser.displayName,
-                taskTitle: task.title,
-                subject: task.subject,
-                answers,
-                status: 'pending',
-                score: 0,
-                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                dateStr: new Date().toLocaleDateString('id-ID'),
-                timeStr: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-            });
-            toast("Tugas berhasil dikirim!");
-            document.getElementById('student-exam-area').classList.add('hidden');
-            showSection('do-task');
-        } catch (e) { toast("Gagal mengirim tugas"); }
-    }
-
-    // --- EVALUASI & PENILAIAN ---
-    async function loadResultsTable() {
-        const tbody = document.getElementById('results-table');
-        tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center">Memuat data...</td></tr>';
-        
-        try {
-            const snap = await db.collection('submissions').where('teacherId', '==', currentUser.uid).get();
-            tbody.innerHTML = "";
-            
-            const filterDate = document.getElementById('filter-date').value;
-            let results = [];
-            snap.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
-
-            if (filterDate) {
-                const target = new Date(filterDate).toLocaleDateString('id-ID');
-                results = results.filter(r => r.dateStr === target);
-            }
-
-            if (results.length === 0) tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400">Tidak ada data ditemukan.</td></tr>';
-
-            results.forEach(r => {
-                const row = document.createElement('tr');
-                row.className = "hover:bg-slate-50";
-                row.innerHTML = `
-                    <td class="py-4 px-2 font-bold">${r.studentName}</td>
-                    <td class="py-4 px-2">${r.subject}</td>
-                    <td class="py-4 px-2">${r.answers.length} Soal</td>
-                    <td class="py-4 px-2 text-slate-400 text-xs">${r.dateStr} | ${r.timeStr}</td>
-                    <td class="py-4 px-2">
-                        <span class="px-3 py-1 rounded-full text-xs font-bold ${r.status === 'graded' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
-                            ${r.status === 'graded' ? r.score : 'Belum Dinilai'}
-                        </span>
-                    </td>
-                    <td class="py-4 px-2 text-center">
-                        <button onclick="evaluateSubmission('${r.id}')" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700">PERIKSA</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        } catch (e) { toast("Gagal memuat tabel"); }
-    }
-
-    async function evaluateSubmission(id) {
-        currentGradingDocId = id;
-        const subSnap = await db.collection('submissions').doc(id).get();
-        const sub = subSnap.data();
-        const taskSnap = await db.collection('tasks').doc(sub.taskId).get();
-        const task = taskSnap.data();
-
-        const body = document.getElementById('grading-body');
-        body.innerHTML = `
-            <div class="flex items-center gap-4 bg-indigo-50 p-4 rounded-2xl mb-8">
-                <div class="bg-white p-3 rounded-xl"><i data-lucide="user" class="text-indigo-600"></i></div>
-                <div><h4 class="text-lg font-bold">${sub.studentName}</h4><p class="text-sm text-slate-500">${sub.taskTitle}</p></div>
+        let html = `
+            <div class="flex justify-between items-start border-b pb-6 mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">${task.title}</h2>
+                    <p class="text-slate-500">${task.subject} | Kelas ${task.class}</p>
+                </div>
+                <button onclick="showSection('do-task')" class="text-slate-400 hover:text-red-500"><i data-lucide="x-circle"></i></button>
             </div>
         `;
 
         task.questions.forEach((q, i) => {
-            const ans = sub.answers[i];
-            const div = document.createElement('div');
-            div.className = "p-6 border-2 border-slate-100 rounded-2xl space-y-4";
+            html += `<div class="mb-10 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="font-bold text-slate-700 text-lg mb-6 leading-relaxed">${i+1}. ${q.text}</p>`;
             
-            let status = '';
             if (q.type === 'pg') {
-                const correct = q.correct === ans.val;
-                status = correct ? '<span class="text-emerald-500 font-bold">[BENAR]</span>' : '<span class="text-red-500 font-bold">[SALAH]</span>';
-                div.innerHTML = `
-                    <p class="font-bold text-slate-700">${i+1}. ${q.text} ${status}</p>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="p-2 bg-slate-50 rounded">Kunci: <span class="font-bold">${q.correct}</span></div>
-                        <div class="p-2 bg-indigo-50 rounded">Jawaban Murid: <span class="font-bold">${ans.val || '-'}</span></div>
-                    </div>
-                `;
+                ['A','B','C','D'].forEach(o => {
+                    html += `
+                        <label class="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl mb-3 cursor-pointer hover:border-indigo-500 transition-colors">
+                            <input type="radio" name="ans-${i}" value="${o}" class="w-5 h-5 text-indigo-600">
+                            <span class="font-medium text-slate-600">${o}. ${q.options[o]}</span>
+                        </label>
+                    `;
+                });
             } else {
-                div.innerHTML = `
-                    <p class="font-bold text-slate-700">${i+1}. ${q.text}</p>
-                    <div class="p-4 bg-slate-50 rounded-xl italic text-slate-600 border border-slate-200">" ${ans.val || 'Tidak ada jawaban.'} "</div>
-                    <div class="flex items-center gap-4">
-                        <label class="text-sm font-bold text-slate-500">Nilai Esai (0-100):</label>
-                        <input type="number" id="grade-val-${i}" class="w-24 p-2 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" value="0">
-                    </div>
-                `;
+                html += `<textarea name="ans-${i}" class="w-full p-4 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500" rows="4" placeholder="Tulis jawaban esai Anda..."></textarea>`;
             }
-            body.appendChild(div);
+            html += `</div>`;
         });
 
-        document.getElementById('modal-grading').classList.remove('hidden');
+        html += `<button onclick="submitExam('${id}')" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-xl hover:bg-indigo-700">Kirim Seluruh Jawaban</button>`;
+        area.innerHTML = html;
         lucide.createIcons();
     }
 
-    async function submitFinalGrade() {
-        const id = currentGradingDocId;
-        const subSnap = await db.collection('submissions').doc(id).get();
-        const sub = subSnap.data();
-        const taskSnap = await db.collection('tasks').doc(sub.taskId).get();
-        const task = taskSnap.data();
-
-        let total = 0;
-        task.questions.forEach((q, i) => {
-            if (q.type === 'pg') {
-                if (q.correct === sub.answers[i].val) total += 100;
+    async function submitExam(taskId) {
+        const area = document.getElementById('student-exam-area');
+        const inputs = area.querySelectorAll('[name^="ans-"]');
+        let answers = [];
+        
+        inputs.forEach(input => {
+            if (input.type === 'radio') {
+                if (input.checked) answers.push(input.value);
             } else {
-                const val = parseInt(document.getElementById(`grade-val-${i}`).value) || 0;
-                total += val;
+                answers.push(input.value);
             }
         });
 
-        const finalScore = Math.round(total / task.questions.length);
-
         try {
-            await db.collection('submissions').doc(id).update({
-                score: finalScore,
+            await db.collection('submissions').add({
+                taskId: taskId,
+                studentName: currentUser.displayName,
+                answers: answers,
+                teacherId: currentUser.teacherId,
+                status: 'pending',
+                grade: 0,
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            toast("Tugas Anda berhasil terkirim!");
+            area.classList.add('hidden');
+            showSection('do-task');
+        } catch(e) { toast("Gagal kirim: " + e.message); }
+    }
+
+    // RESULTS & GRADING (GURU)
+    async function loadResultsTable() {
+        const tbody = document.getElementById('results-table');
+        tbody.innerHTML = "<tr><td colspan='5' class='p-4 text-center'>Memuat hasil...</td></tr>";
+        
+        try {
+            // Ambil info tugas untuk memetakan judul
+            const tasksSnap = await db.collection('tasks').where('teacherId', '==', currentUser.uid).get();
+            let taskMap = {};
+            tasksSnap.forEach(d => taskMap[d.id] = d.data());
+
+            const subsSnap = await db.collection('submissions').where('teacherId', '==', currentUser.uid).get();
+            tbody.innerHTML = "";
+            
+            subsSnap.forEach(doc => {
+                const s = doc.data();
+                const tInfo = taskMap[s.taskId] || { title: 'Tugas Dihapus', subject: '-' };
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-slate-700">${s.studentName}</td>
+                    <td class="p-4 text-slate-500">${tInfo.subject}</td>
+                    <td class="p-4 text-slate-500">${tInfo.title}</td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${s.status === 'graded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                            ${s.status === 'graded' ? s.grade : 'Pending'}
+                        </span>
+                    </td>
+                    <td class="p-4">
+                        <button onclick="openGrading('${doc.id}')" class="text-indigo-600 font-bold hover:underline">Periksa</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function openGrading(subId) {
+        currentGradingId = subId;
+        const subDoc = await db.collection('submissions').doc(subId).get();
+        const submission = subDoc.data();
+        const taskDoc = await db.collection('tasks').doc(submission.taskId).get();
+        const task = taskDoc.data();
+
+        const body = document.getElementById('grading-body');
+        let html = `<h2 class="text-2xl font-bold mb-2">Evaluasi: ${submission.studentName}</h2><p class="text-slate-400 mb-6">Tugas: ${task.title}</p>`;
+
+        task.questions.forEach((q, i) => {
+            const studentAns = submission.answers[i] || "(Tidak menjawab)";
+            html += `
+                <div class="p-5 border rounded-2xl bg-white shadow-sm">
+                    <p class="font-bold text-slate-700 mb-2">${i+1}. ${q.text}</p>
+                    <p class="text-sm text-slate-400 uppercase font-bold mb-1">Jawaban Murid:</p>
+                    <div class="p-3 bg-indigo-50 rounded-lg text-indigo-900 border border-indigo-100 mb-3">${studentAns}</div>
+                    ${q.type === 'pg' ? `<p class="text-xs font-bold text-emerald-600">Kunci Jawaban: ${q.correct}</p>` : ''}
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="mt-8 p-6 bg-slate-900 text-white rounded-2xl">
+                <label class="block text-sm font-bold mb-3">MASUKKAN NILAI AKHIR (0-100):</label>
+                <input type="number" id="final-grade-input" value="${submission.grade}" class="w-full bg-transparent border-b-2 border-indigo-500 text-4xl font-bold outline-none pb-2">
+            </div>
+        `;
+
+        body.innerHTML = html;
+        document.getElementById('modal-grading').classList.remove('hidden');
+    }
+
+    async function submitFinalGrade() {
+        const grade = document.getElementById('final-grade-input').value;
+        try {
+            await db.collection('submissions').doc(currentGradingId).update({
+                grade: parseInt(grade),
                 status: 'graded'
             });
-            toast("Nilai murid berhasil disimpan!");
             closeModal();
             loadResultsTable();
             updateTeacherStats();
-        } catch (e) { toast("Gagal menyimpan nilai"); }
+            toast("Nilai berhasil disimpan!");
+        } catch(e) { toast("Gagal simpan nilai."); }
     }
 
-    // --- UTILS ---
+    function closeModal() {
+        document.getElementById('modal-grading').classList.add('hidden');
+    }
+
+    // DASHBOARD STATS
+    async function updateTeacherStats() {
+        if (!currentUser) return;
+        const tasks = await db.collection('tasks').where('teacherId', '==', currentUser.uid).get();
+        const subs = await db.collection('submissions').where('teacherId', '==', currentUser.uid).get();
+        
+        let pending = 0;
+        subs.forEach(d => { if (d.data().status === 'pending') pending++; });
+
+        document.getElementById('stat-tasks').innerText = tasks.size;
+        document.getElementById('stat-subs').innerText = subs.size;
+        document.getElementById('stat-pending').innerText = pending;
+    }
+
+    async function loadSidebarArchive() {
+        const list = document.getElementById('archive-list-sidebar');
+        list.innerHTML = "";
+        const snap = await db.collection('tasks').where('teacherId', '==', currentUser.uid).limit(10).get();
+        snap.forEach(doc => {
+            const t = doc.data();
+            const div = document.createElement('div');
+            div.className = "p-2 text-slate-500 hover:text-indigo-600 cursor-pointer text-[11px] truncate border-l-2 border-transparent hover:border-indigo-400 pl-3";
+            div.innerText = `${t.subject} - ${t.title}`;
+            list.appendChild(div);
+        });
+    }
+
+    // UTILS
+    function shareId() {
+        navigator.clipboard.writeText(currentUser.uid);
+        toast("ID Guru disalin ke clipboard!");
+    }
+
     function toast(msg) {
         const t = document.getElementById('toast');
         t.innerText = msg;
@@ -646,88 +601,7 @@
         setTimeout(() => t.classList.add('hidden'), 3000);
     }
 
-    function closeModal() { document.getElementById('modal-grading').classList.add('hidden'); }
-
-    function openGoogleMeet() { window.open('https://meet.google.com/new', '_blank'); }
-
-    function logout() { 
-        auth.signOut();
-        localStorage.clear();
-        window.location.reload(); 
-    }
-
-    function shareId() {
-        navigator.clipboard.writeText(currentUser.uid);
-        toast("ID Guru disalin! Bagikan ke murid.");
-    }
-
-    async function updateTeacherStats() {
-        if (userRole !== 'teacher') return;
-        const tasks = await db.collection('tasks').where('teacherId', '==', currentUser.uid).get();
-        const subs = await db.collection('submissions').where('teacherId', '==', currentUser.uid).get();
-        
-        document.getElementById('stat-tasks').innerText = tasks.size;
-        document.getElementById('stat-subs').innerText = subs.size;
-        
-        let pending = 0;
-        subs.forEach(doc => { if (doc.data().status === 'pending') pending++; });
-        document.getElementById('stat-pending').innerText = pending;
-    }
-
-    async function loadSidebarArchive() {
-        const list = document.getElementById('archive-list-sidebar');
-        list.innerHTML = "";
-        try {
-            const snap = await db.collection('tasks').where('teacherId', '==', currentUser.uid).get();
-            snap.forEach(doc => {
-                const t = doc.data();
-                const div = document.createElement('div');
-                div.className = "p-2 hover:bg-slate-200 rounded flex justify-between items-center group";
-                div.innerHTML = `
-                    <div class="truncate pr-2">
-                        <p class="font-bold truncate">${t.subject} - ${t.title}</p>
-                        <p class="text-[9px] text-slate-400">Kelas ${t.class}</p>
-                    </div>
-                    <button onclick="printTask('${doc.id}')" class="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <i data-lucide="printer" class="w-3 h-3"></i>
-                    </button>
-                `;
-                list.appendChild(div);
-            });
-            lucide.createIcons();
-        } catch (e) {}
-    }
-
-    function printTask(id) {
-        toast("Fitur cetak sedang disiapkan...");
-        // Logika print bisa dikembangkan lebih lanjut untuk format PDF
-    }
-
-    function filterResults() { loadResultsTable(); }
-    function resetTableFilter() {
-        document.getElementById('filter-date').value = "";
-        loadResultsTable();
-    }
-
-    window.onload = () => {
-        lucide.createIcons();
-        // Cek jika ada session lama
-        const savedRole = localStorage.getItem('edu_role');
-        if (savedRole === 'teacher') {
-            auth.onAuthStateChanged(user => {
-                if (user) { currentUser = user; userRole = 'teacher'; initDashboard(); }
-            });
-        } else if (savedRole === 'student') {
-            currentUser = { 
-                uid: 'std_' + Date.now(), 
-                displayName: localStorage.getItem('std_name'), 
-                teacherId: localStorage.getItem('std_tid') 
-            };
-            userRole = 'student';
-            initDashboard();
-        }
-    };
+    window.onload = () => lucide.createIcons();
 </script>
-
 </body>
 </html>
