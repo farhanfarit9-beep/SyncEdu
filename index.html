@@ -46,40 +46,37 @@
                 </div>
             </div>
             <div class="p-10 bg-white flex flex-col justify-center">
-                <div class="text-center mb-8">
-                    <h2 class="text-2xl font-bold text-gray-800">Selamat Datang</h2>
-                    <p class="text-gray-500">Pilih akses masuk Anda</p>
-                </div>
-                
-                <!-- Guru Login -->
-                <button id="btn-login-guru" class="w-full flex items-center justify-center gap-3 border border-gray-300 p-3 rounded-lg hover:bg-gray-50 transition mb-6 shadow-sm">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
-                    <span class="font-medium">Masuk Sebagai Guru (Google)</span>
-                </button>
-
-                <div class="relative flex items-center justify-center mb-6">
-                    <div class="border-b w-full"></div>
-                    <span class="absolute bg-white px-3 text-xs text-gray-400 uppercase tracking-widest">Atau Murid</span>
-                </div>
-
-                <!-- Murid Login -->
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nama Lengkap</label>
-                        <input type="text" id="student-name" placeholder="Contoh: Ahmad Fauzi" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">ID Guru</label>
-                        <input type="text" id="teacher-id" placeholder="Masukkan ID dari Guru Anda" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
-                    </div>
-                    <button id="btn-login-murid" class="w-full bg-gray-800 text-white p-4 rounded-lg font-bold hover:bg-gray-900 transition transform active:scale-95 shadow-lg">
-                        MASUK UJIAN
-                    </button>
-                </div>
-                <p class="text-center text-xs text-gray-400 mt-6">© 2026 EduSmart Platform. Versi 2.4.0</p>
-            </div>
-        </div>
+    <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold text-gray-800">Selamat Datang</h2>
+        <p class="text-gray-500">Pilih akses masuk Anda</p>
     </div>
+    
+    <button id="btn-login-guru" onclick="loginGoogle()" class="w-full flex items-center justify-center gap-3 border border-gray-300 p-3 rounded-lg hover:bg-gray-50 transition mb-6 shadow-sm">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+        <span class="font-medium">Masuk Sebagai Guru (Google)</span>
+    </button>
+
+    <div class="relative flex items-center justify-center mb-6">
+        <div class="border-b w-full"></div>
+        <span class="absolute bg-white px-3 text-xs text-gray-400 uppercase tracking-widest">Atau Murid</span>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nama Lengkap</label>
+            <input type="text" id="student-name" placeholder="Contoh: Ahmad Fauzi" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
+        </div>
+        <div>
+            <label class="text-xs font-bold text-gray-400 uppercase ml-1">ID Guru</label>
+            <input type="text" id="teacher-id" placeholder="Masukkan ID dari Guru Anda" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
+        </div>
+        <button id="btn-login-murid" onclick="startExam()" class="w-full bg-gray-800 text-white p-4 rounded-lg font-bold hover:bg-gray-900 transition transform active:scale-95 shadow-lg">
+            MASUK UJIAN
+        </button>
+    </div>
+
+    <p class="text-center text-xs text-gray-400 mt-6">© 2026 EduSmart Platform. Versi 2.4.0</p>
+</div>
 
     <!-- Teacher Portal -->
     <div id="teacher-portal" class="hidden min-h-screen flex flex-col">
