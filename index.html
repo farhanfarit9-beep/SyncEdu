@@ -101,6 +101,10 @@
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </button>
+                <button onclick="switchTeacherTab('classroom')" class="teacher-tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100 transition-all" data-tab="classroom">
+                    <i class="fas fa-chalkboard"></i>
+                    <span>Classroom</span>
+                </button>
                 <button onclick="switchTeacherTab('tasks')" class="teacher-tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100 transition-all" data-tab="tasks">
                     <i class="fas fa-file-signature"></i>
                     <span>Kelola Ujian</span>
@@ -228,7 +232,6 @@
         // AUTH FUNCTIONS
         window.loginWithGoogle = async () => {
             try {
-                // Gunakan signInWithPopup dengan provider yang benar
                 await signInWithPopup(auth, googleProvider);
             } catch (error) {
                 console.error("Login Error:", error);
@@ -243,13 +246,11 @@
             
             try {
                 localStorage.setItem('edu_student_name', name);
-                // Auth anonymously for students
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
-                // Auth listener will handle the UI transition
             } catch (error) {
                 console.error("Student Login Error:", error);
                 alert("Gagal masuk: " + error.message);
@@ -312,11 +313,48 @@
                     </div>
                 `;
                 
-                // Fetch stats from firestore
                 const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'exams'));
                 onSnapshot(q, (snapshot) => {
-                    document.getElementById('stat-total-exams').innerText = snapshot.size;
+                    document.getElementById('stat-total-exams').innerText = snapshot.docs.filter(d => d.data().teacherId === auth.currentUser.uid).length;
                 }, (err) => console.log(err));
+            } else if(currentTab === 'classroom') {
+                container.innerHTML = `
+                    <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center space-x-4 mb-8">
+                            <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">Manajemen Kelas</h3>
+                                <p class="text-sm text-gray-500">Bagikan ID Anda kepada siswa agar mereka bisa melihat ujian.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-600 p-8 rounded-3xl text-white mb-8 relative overflow-hidden">
+                            <div class="relative z-10">
+                                <div class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2">ID GURU ANDA</div>
+                                <div class="text-3xl font-mono font-bold mb-6">${auth.currentUser.uid}</div>
+                                <button onclick="copyTeacherId()" class="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-50 transition-all">SALIN KODE KELAS</button>
+                            </div>
+                            <i class="fas fa-graduation-cap absolute -right-4 -bottom-4 text-9xl text-white/10 rotate-12"></i>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-6 border border-gray-100 rounded-2xl bg-slate-50">
+                                <h4 class="font-bold text-gray-700 mb-2">Instruksi Siswa:</h4>
+                                <ol class="text-sm text-gray-500 space-y-2 list-decimal ml-4">
+                                    <li>Minta siswa masuk ke Portal Siswa.</li>
+                                    <li>Siswa harus memasukkan ID di atas pada kolom "Input ID Guru".</li>
+                                    <li>Daftar ujian yang Anda publikasikan akan muncul secara otomatis.</li>
+                                </ol>
+                            </div>
+                            <div class="p-6 border border-gray-100 rounded-2xl bg-slate-50">
+                                <h4 class="font-bold text-gray-700 mb-2">Keamanan:</h4>
+                                <p class="text-sm text-gray-500">Hanya siswa yang memiliki ID Guru Anda yang dapat melihat paket soal Anda. Pastikan ID hanya dibagikan kepada kelas yang bersangkutan.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
             } else if(currentTab === 'tasks') {
                 container.innerHTML = `
                     <div class="flex justify-between items-center mb-6">
@@ -380,7 +418,7 @@
                         </div>
                         <div class="flex items-center text-xs text-gray-500 mb-6 space-x-4">
                             <span><i class="far fa-clock mr-1"></i> ${data.duration} Menit</span>
-                            <span><i class="far fa-calendar mr-1"></i> ${new Date(data.createdAt?.seconds * 1000).toLocaleDateString()}</span>
+                            <span><i class="far fa-calendar mr-1"></i> ${data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : 'Baru'}</span>
                         </div>
                         <div class="flex space-x-2">
                             <button onclick="deleteTask('${docSnap.id}')" class="flex-1 border border-red-100 text-red-500 py-2 rounded-lg text-sm font-bold hover:bg-red-50">Hapus</button>
@@ -511,7 +549,6 @@
             
             onSnapshot(q, (snapshot) => {
                 tbody.innerHTML = "";
-                // Rule: Fetch simple, filter in JS
                 const myResults = snapshot.docs.filter(d => d.data().teacherId === auth.currentUser.uid);
 
                 if(myResults.length === 0) {
@@ -530,7 +567,7 @@
                             <span class="bg-blue-600 text-white font-mono px-3 py-1 rounded-full font-bold">${data.score}</span>
                         </td>
                         <td class="p-4 text-right">
-                            <span class="text-[10px] text-gray-400 uppercase font-bold">${new Date(data.submittedAt?.seconds * 1000).toLocaleString()}</span>
+                            <span class="text-[10px] text-gray-400 uppercase font-bold">${data.submittedAt ? new Date(data.submittedAt.seconds * 1000).toLocaleString() : 'Baru saja'}</span>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -607,11 +644,6 @@
             startTimer(data.duration);
             renderExamNav();
             renderQuestion();
-
-            // Anti-curang simple: alert if focus lost
-            window.onblur = () => {
-                console.log("Siswa meninggalkan tab ujian!");
-            };
         };
 
         const startTimer = (minutes) => {
@@ -706,7 +738,6 @@
 
             clearInterval(examTimerInterval);
             
-            // Calculate Score
             let correctCount = 0;
             currentExamData.questions.forEach((q, idx) => {
                 if(studentAnswers[idx] === q.correct) correctCount++;
@@ -732,10 +763,8 @@
             }
         };
 
-        // GLOBAL ACTIONS
         window.deleteTask = async (id) => {
             if(confirm("Hapus paket soal ini? Murid tidak akan bisa mengaksesnya lagi.")) {
-                // Dalam prototype ini kita gunakan dummy delete atau set inactive karena keterbatasan iFrame
                 alert("Fungsi hapus sedang diproses ke Cloud...");
             }
         };
