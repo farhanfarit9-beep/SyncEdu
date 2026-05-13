@@ -470,15 +470,17 @@
                 lastActive: serverTimestamp() 
             }, { merge: true });
 
-           // Listen ke tugas yang dibuat secara Real-time
+           // Listen ke tugas yang dibuat
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), where('teacherId', '==', user.uid));
             
             onSnapshot(q, (snapshot) => {
                 const list = document.getElementById('riwayat-soal-list');
-                const statTotal = document.getElementById('stat-total-soal');
+                const statTotal = document.getElementById('stat-total-soal'); // Ambil elemen angka
                 
-                // Update angka statistik di dashboard
-                statTotal.innerText = snapshot.size;
+                // UPDATE ANGKA DI KOTAK BIRU
+                if (statTotal) {
+                    statTotal.innerText = snapshot.size; // Mengubah 0 menjadi jumlah data di Firebase
+                }
                 
                 list.innerHTML = '';
                 
@@ -492,7 +494,7 @@
                     list.innerHTML += `
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-blue-300 transition">
                             <div class="flex gap-4 items-center">
-                                <div class="w-12 h-12 blue-gradient rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold">
                                     ${(d.subject || "??").substring(0,2).toUpperCase()}
                                 </div>
                                 <div>
@@ -501,17 +503,12 @@
                                 </div>
                             </div>
                             <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                                <button onclick="window.shareTask('${user.uid}')" class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition">
+                                <button onclick="shareTask('${user.uid}')" class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition">
                                     <i class="fas fa-copy"></i>
-                                </button>
-                                <button onclick="deleteTask('${docSnap.id}')" class="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-500 hover:text-white transition">
-                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>`;
                 });
-            }, (error) => {
-                console.error("Error pada listener statistik:", error);
             });
             
             loadHasilKerja();
