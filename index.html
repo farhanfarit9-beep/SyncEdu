@@ -31,7 +31,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        const geminiApiKey = "AIzaSyDzkdsP3OAMdz46S1RdQJKTXC5K_fuNUGE";
+        const geminiApiKey = "AIzaSyD-ksh0ZUfAMmv7ozRn4iBoKnUW5G9CBQM";
         window.__geminiKey = geminiApiKey;
         window.__geminiKeyUM = geminiApiKey; 
 
@@ -88,6 +88,8 @@
         window.closeUjianMandiri = () => {
             document.getElementById('ujian-mandiri-modal').classList.add('hidden');
         };
+
+        window.loginMurid = async () => {
             const idSoal = document.getElementById('student-teacher-id').value.trim();
             const namaMurid = document.getElementById('student-name').value.trim();
             if (!idSoal || !namaMurid) return alert("Isi Nama Lengkap dan ID Soal!");
