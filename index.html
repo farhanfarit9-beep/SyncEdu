@@ -32,7 +32,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        const geminiApiKey = "AIzaSyC7FMkye41tsSOBjwLJPqao7vvCS4JD0WQ";
+        const geminiApiKey = "AIzaSyBUHMiNHmZ6LBlSxL3k08pMq3AiMiNhY6M";
         window.__geminiKey = geminiApiKey;
         window.__geminiKeyUM = geminiApiKey; 
 
@@ -1235,13 +1235,9 @@
             });
         }
 
-        // --- BATAS UKURAN FILE (standar WhatsApp) ---
-        // Gambar: 16 MB, Video: 64 MB, Dokumen: 100 MB
-        const FILE_LIMITS = {
-            image: 16 * 1024 * 1024,
-            video: 64 * 1024 * 1024,
-            document: 100 * 1024 * 1024
-        };
+        // --- CLOUDINARY CONFIG ---
+        const CLOUDINARY_CLOUD = 'doarbb5nb';
+        const CLOUDINARY_PRESET = 'edusmart_upload';
 
         function getFileCategory(file) {
             if (file.type.startsWith('image/')) return 'image';
@@ -1249,34 +1245,42 @@
             return 'document';
         }
 
-        function getFileLimitLabel(cat) {
-            if (cat === 'image') return '16 MB';
-            if (cat === 'video') return '64 MB';
-            return '100 MB';
+        // Upload file ke Cloudinary dengan progress (gratis, tanpa kartu kredit)
+        function uploadToCloudinary(file, onProgress) {
+            return new Promise((resolve, reject) => {
+                const cat = getFileCategory(file);
+                // Cloudinary resource_type: image, video, atau raw (dokumen)
+                const resourceType = cat === 'image' ? 'image' : cat === 'video' ? 'video' : 'raw';
+                const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${resourceType}/upload`;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_PRESET);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable && onProgress) {
+                        onProgress(Math.round((e.loaded / e.total) * 100));
+                    }
+                };
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        const res = JSON.parse(xhr.responseText);
+                        resolve(res.secure_url);
+                    } else {
+                        const err = JSON.parse(xhr.responseText);
+                        reject(new Error(err.error?.message || 'Upload Cloudinary gagal'));
+                    }
+                };
+                xhr.onerror = () => reject(new Error('Koneksi internet terputus'));
+                xhr.send(formData);
+            });
         }
 
-        // --- UPLOAD FILE MURID (Multi-file, batas seperti WhatsApp) ---
+        // --- UPLOAD FILE MURID (Multi-file via Cloudinary — gratis, tanpa batas ukuran praktis) ---
         window.submitFileUpload = async () => {
             if (selectedFiles.length === 0) return alert('Pilih file terlebih dahulu!');
-
-            // Validasi ukuran sebelum upload
-            const terlalubesar = [];
-            for (const file of selectedFiles) {
-                const cat = getFileCategory(file);
-                if (file.size > FILE_LIMITS[cat]) {
-                    terlalubesar.push({ file, cat });
-                }
-            }
-            if (terlalubesar.length > 0) {
-                const detail = terlalubesar.map((x, i) => {
-                    const nomorFile = selectedFiles.indexOf(x.file) + 1;
-                    const ukuran = (x.file.size / 1024 / 1024).toFixed(2);
-                    const batas = getFileLimitLabel(x.cat);
-                    return `File ke-${nomorFile} (${x.file.name})\nUkuran: ${ukuran} MB | Batas: ${batas}`;
-                }).join('\n\n');
-                alert(`⚠️ File berikut melebihi batas ukuran:\n\n${detail}\n\nTolong kompres atau pilih file yang lebih kecil sebelum upload.`);
-                return;
-            }
 
             const keterangan = document.getElementById('murid-keterangan').value.trim();
             const subject = document.getElementById('murid-subject').value.trim();
@@ -1286,75 +1290,52 @@
             const studentKelas = localStorage.getItem('studentKelas') || '';
 
             const btn = document.getElementById('btn-submit-file');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengupload...';
             btn.disabled = true;
 
             let berhasil = 0;
-            const gagalDetail = []; // [{nomorFile, nama, alasan}]
-            const gagalIndeks = []; // indeks file yang gagal di selectedFiles
+            const gagalDetail = [];
+            const gagalIndeks = [];
 
             try {
                 const appId = "edu-exam-2026";
-                // Proses semua file: kompres dan baca base64
-                const filesPayload = []; // [{name, type, data}] yang berhasil
+                const filesPayload = [];
+
                 for (let i = 0; i < selectedFiles.length; i++) {
                     const file = selectedFiles[i];
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Memproses file ke-${i+1} dari ${selectedFiles.length}...`;
+                    const totalFiles = selectedFiles.length;
+
                     try {
-                        const fileData = await fileToBase64Compressed(file);
-                        const base64Size = fileData.length * 0.75;
-                        if (base64Size > 900 * 1024) {
-                            throw new Error('Ukuran data terlalu besar untuk disimpan. Kompres file terlebih dahulu.');
-                        }
-                        filesPayload.push({ name: file.name, type: file.type, data: fileData });
+                        // Semua file → Cloudinary (gambar, video, dokumen — gratis!)
+                        const downloadUrl = await uploadToCloudinary(file, (pct) => {
+                            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Upload file ${i+1}/${totalFiles}: ${pct}%`;
+                        });
+                        filesPayload.push({ name: file.name, type: file.type, url: downloadUrl, storageType: 'cloudinary' });
                         berhasil++;
                     } catch(err) {
-                        console.error('Gagal proses file ke-' + (i+1) + ':', file.name, err);
-                        let alasan = 'Gagal tidak diketahui';
-                        if (err.message && err.message.toLowerCase().includes('quota')) alasan = 'Kuota penyimpanan penuh';
-                        else if (err.message && err.message.toLowerCase().includes('besar')) alasan = err.message;
-                        else if (err.message && err.message.toLowerCase().includes('network')) alasan = 'Koneksi internet terputus';
-                        else if (err.message) alasan = err.message;
-                        gagalDetail.push({ nomorFile: i+1, nama: file.name, alasan });
+                        console.error('Gagal upload file ke-' + (i+1) + ':', file.name, err);
+                        gagalDetail.push({ nomorFile: i+1, nama: file.name, alasan: err.message || 'Gagal tidak diketahui' });
                         gagalIndeks.push(i);
                     }
                 }
 
-                // Simpan semua file yang berhasil dalam SATU dokumen Firestore
+                // Simpan URL ke Firestore (ringan, hanya metadata + URL)
                 if (filesPayload.length > 0) {
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan ke server...`;
-                    try {
+                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan data...`;
+                    for (const fp of filesPayload) {
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'file_submissions'), {
                             teacherId, studentName, studentEmail, studentKelas,
                             subject, keterangan,
-                            // Simpan semua file sebagai array dalam 1 dokumen
-                            filesArray: filesPayload,
-                            // Backward compat: simpan file pertama di field lama
-                            fileName: filesPayload[0].name,
-                            fileType: filesPayload[0].type,
-                            fileData: filesPayload[0].data,
-                            fileCount: filesPayload.length,
+                            filesArray: [fp],
+                            fileName: fp.name,
+                            fileType: fp.type,
+                            fileUrl: fp.url,
+                            fileCount: 1,
+                            storageType: 'cloudinary',
                             timestamp: serverTimestamp(),
                             dateStr: new Date().toISOString().split('T')[0],
                             timeStr: new Date().toLocaleTimeString(),
                             nilaiGuru: '', status: 'uploaded'
                         });
-                    } catch(saveErr) {
-                        // Jika 1 dokumen terlalu besar, simpan per file
-                        console.warn('Simpan 1 dokumen gagal, coba per file:', saveErr);
-                        for (const fp of filesPayload) {
-                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'file_submissions'), {
-                                teacherId, studentName, studentEmail, studentKelas,
-                                subject, keterangan,
-                                filesArray: [fp],
-                                fileName: fp.name, fileType: fp.type, fileData: fp.data,
-                                fileCount: 1,
-                                timestamp: serverTimestamp(),
-                                dateStr: new Date().toISOString().split('T')[0],
-                                timeStr: new Date().toLocaleTimeString(),
-                                nilaiGuru: '', status: 'uploaded'
-                            });
-                        }
                     }
                 }
 
@@ -1365,17 +1346,13 @@
                     document.getElementById('upload-file-screen').classList.add('hidden');
                     document.getElementById('login-screen').classList.remove('hidden');
                 } else if (berhasil > 0 && gagalDetail.length > 0) {
-                    const detailGagal = gagalDetail.map(g =>
-                        `❌ File ke-${g.nomorFile} (${g.nama})\n   Penyebab: ${g.alasan}`
-                    ).join('\n\n');
-                    alert(`✅ ${berhasil} file berhasil diupload.\n\n⚠️ ${gagalDetail.length} file GAGAL:\n\n${detailGagal}\n\nFile yang gagal masih ada di halaman upload. Silakan coba lagi.`);
+                    const detailGagal = gagalDetail.map(g => `❌ File ke-${g.nomorFile} (${g.nama})\n   Penyebab: ${g.alasan}`).join('\n\n');
+                    alert(`✅ ${berhasil} file berhasil diupload.\n\n⚠️ ${gagalDetail.length} file GAGAL:\n\n${detailGagal}`);
                     const indeksGagalSet = new Set(gagalIndeks);
                     selectedFiles = selectedFiles.filter((_, idx) => indeksGagalSet.has(idx));
                     renderFileCarousel();
                 } else {
-                    const detailGagal = gagalDetail.map(g =>
-                        `❌ File ke-${g.nomorFile} (${g.nama})\n   Penyebab: ${g.alasan}`
-                    ).join('\n\n');
+                    const detailGagal = gagalDetail.map(g => `❌ File ke-${g.nomorFile} (${g.nama})\n   Penyebab: ${g.alasan}`).join('\n\n');
                     alert(`❌ Semua file gagal diupload!\n\n${detailGagal}`);
                 }
             } catch(e) {
@@ -1439,9 +1416,12 @@
                 // Kumpulkan semua file dari dokumen ini
                 const files = [];
                 if (sub.filesArray && Array.isArray(sub.filesArray)) {
-                    sub.filesArray.forEach(f => files.push({ name: f.name, type: f.type, data: f.data, url: null }));
+                    sub.filesArray.forEach(f => files.push({ name: f.name, type: f.type, data: f.data || null, url: f.url || null }));
+                } else if (sub.fileUrl) {
+                    // Video/dokumen besar dari Firebase Storage
+                    files.push({ name: sub.fileName, type: sub.fileType, data: null, url: sub.fileUrl });
                 } else if (sub.fileData) {
-                    // Format lama: 1 dokumen = 1 file
+                    // Format lama: 1 dokumen = 1 file base64
                     files.push({ name: sub.fileName, type: sub.fileType, data: sub.fileData, url: null });
                 } else if (sub.files && Array.isArray(sub.files)) {
                     sub.files.forEach(f => files.push({ name: f.name, type: null, data: null, url: f.url }));
@@ -1523,8 +1503,12 @@
             if (sub.filesArray && Array.isArray(sub.filesArray) && sub.filesArray.length > 0) {
                 for (var j = 0; j < sub.filesArray.length; j++) {
                     var ff = sub.filesArray[j];
-                    allFiles.push({ name: ff.name, type: ff.type, data: ff.data, url: null });
+                    // Support both base64 (data) and Firebase Storage (url)
+                    allFiles.push({ name: ff.name, type: ff.type, data: ff.data || null, url: ff.url || null });
                 }
+            } else if (sub.fileUrl) {
+                // File disimpan di Firebase Storage (video/dokumen besar)
+                allFiles.push({ name: sub.fileName || 'File', type: sub.fileType, data: null, url: sub.fileUrl });
             } else if (sub.fileData) {
                 allFiles.push({ name: sub.fileName || 'File', type: sub.fileType, data: sub.fileData, url: null });
             } else if (sub.files && Array.isArray(sub.files)) {
