@@ -32,7 +32,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        const geminiApiKey = "AIzaSyB66yvE0wu9qGduBsTIhHHAkCeAaROIJHw";
+        const geminiApiKey = "AIzaSyC7FMkye41tsSOBjwLJPqao7vvCS4JD0WQ";
         window.__geminiKey = geminiApiKey;
         window.__geminiKeyUM = geminiApiKey; 
 
@@ -91,37 +91,44 @@
         };
 
         window.loginMurid = async () => {
-            const idSoal = document.getElementById('student-teacher-id').value.trim();
+            const idInput = document.getElementById('student-teacher-id').value.trim();
             const namaMurid = document.getElementById('student-name').value.trim();
-            if (!idSoal || !namaMurid) return alert("Isi Nama Lengkap dan ID Soal!");
+            const kelasMurid = document.getElementById('student-kelas').value.trim();
+            if (!idInput || !namaMurid) return alert("Isi Nama Lengkap dan ID Soal/Guru!");
 
             const btn = document.getElementById('btn-masuk-ujian');
-            btn.innerText = 'Mencari soal...';
+            btn.innerText = 'Mencari...';
             btn.disabled = true;
 
             try {
                 const appId = "edu-exam-2026";
-                // Cari soal berdasarkan publishId
-                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), where("publishId", "==", idSoal));
-                const snap = await getDocs(q);
-
-                if (snap.empty) {
-                    alert("ID Soal tidak ditemukan! Pastikan ID soal yang dimasukkan sudah benar.");
-                    btn.innerText = 'Masuk Ujian';
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Ambil soal pertama yang cocok
-                const examDoc = snap.docs[0];
-                userRole = 'student';
                 localStorage.setItem('studentName', namaMurid);
+                localStorage.setItem('studentKelas', kelasMurid);
 
-                // Langsung masuk ke soal
-                studentDashboard.classList.remove('hidden');
-                loginScreen.classList.add('hidden');
-                document.getElementById('student-display-name').innerText = namaMurid;
-                await startExam(examDoc.id);
+                // Cek apakah input adalah ID soal (format EDU-...)
+                if (idInput.startsWith('EDU-')) {
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), where("publishId", "==", idInput));
+                    const snap = await getDocs(q);
+                    if (snap.empty) {
+                        alert("ID Soal tidak ditemukan!");
+                        btn.innerText = 'Masuk Ujian';
+                        btn.disabled = false;
+                        return;
+                    }
+                    const examDoc = snap.docs[0];
+                    userRole = 'student';
+                    studentDashboard.classList.remove('hidden');
+                    loginScreen.classList.add('hidden');
+                    document.getElementById('student-display-name').innerText = namaMurid;
+                    await startExam(examDoc.id);
+                } else {
+                    // Dianggap sebagai ID Guru → tampilkan form upload file
+                    localStorage.setItem('targetTeacherId', idInput);
+                    userRole = 'student';
+                    loginScreen.classList.add('hidden');
+                    document.getElementById('upload-file-screen').classList.remove('hidden');
+                    document.getElementById('upload-student-name-display').innerText = namaMurid;
+                }
             } catch (e) {
                 console.error(e);
                 alert("Gagal: " + e.message);
@@ -142,9 +149,14 @@
                 loginScreen.classList.add('hidden');
                 teacherDashboard.classList.remove('hidden');
                 document.getElementById('teacher-name-display').innerText = user.displayName;
-                // ID tidak ditampilkan di navbar lagi
+                document.getElementById('teacher-id-display').innerText = user.uid;
+                document.getElementById('teacher-id-display').onclick = () => {
+                    navigator.clipboard.writeText(user.uid);
+                    showNotif('✅ ID Guru disalin!');
+                };
                 loadTeacherSubmissions();
                 loadMyCreatedExams();
+                loadFileSubmissions();
             } else {
                 loginScreen.classList.remove('hidden');
                 teacherDashboard.classList.add('hidden');
@@ -380,6 +392,7 @@
                 examTitle: currentActiveExam.title,
                 subject: currentActiveExam.subject || '',
                 grade: currentActiveExam.grade || '',
+                studentKelas: localStorage.getItem('studentKelas') || '',
                 publishId: currentActiveExam.publishId || '',
                 teacherId: currentActiveExam.teacherId,
                 studentName: studentName,
@@ -443,6 +456,7 @@
                 tr.innerHTML = `
                     ${checkboxCell}
                     <td class="p-3 border border-gray-200 font-medium text-gray-900">${sub.studentName || '-'}</td>
+                    <td class="p-3 border border-gray-200 text-gray-900">${sub.studentKelas || '-'}</td>
                     <td class="p-3 border border-gray-200 text-xs text-gray-700">${sub.studentEmail || '-'}</td>
                     <td class="p-3 border border-gray-200 text-gray-900">${sub.subject || '-'}</td>
                     <td class="p-3 border border-gray-200 text-gray-900">${sub.examTitle || '-'}</td>
@@ -505,15 +519,84 @@
             }
         }
 
-        // --- DELETE MODE ---
+        // State untuk file delete mode (terpisah dari delete mode jawaban)
+        let fileDeleteMode = false;
+        let selectedFileSubmissions = new Set();
+
+        // Fungsi untuk deteksi tab aktif
+        function getActiveTab() {
+            const tabFile = document.getElementById('tab-file');
+            return (tabFile && !tabFile.classList.contains('hidden')) ? 'file' : 'jawaban';
+        }
+
+        // --- DELETE MODE (jawaban) ---
         window.toggleDeleteMode = () => {
-            deleteMode = !deleteMode;
-            if (deleteMode) {
-                printMode = false;
-                selectedSubmissions.clear();
+            const activeTab = getActiveTab();
+            if (activeTab === 'file') {
+                // Aktifkan file delete mode
+                fileDeleteMode = !fileDeleteMode;
+                if (fileDeleteMode) {
+                    deleteMode = false;
+                    printMode = false;
+                    selectedSubmissions.clear();
+                    selectedFileSubmissions.clear();
+                }
+                updateModeUI();
+                renderFileTable();
+            } else {
+                // Aktifkan jawaban delete mode
+                deleteMode = !deleteMode;
+                if (deleteMode) {
+                    fileDeleteMode = false;
+                    printMode = false;
+                    selectedSubmissions.clear();
+                    selectedFileSubmissions.clear();
+                }
+                updateModeUI();
+                renderSubmissionsTable();
             }
-            updateModeUI();
-            renderSubmissionsTable();
+        };
+
+        window.toggleFileSelection = (id) => {
+            if (selectedFileSubmissions.has(id)) {
+                selectedFileSubmissions.delete(id);
+            } else {
+                selectedFileSubmissions.add(id);
+            }
+            const count = selectedFileSubmissions.size;
+            const btn = document.getElementById('confirm-file-delete-btn');
+            if (btn) btn.innerText = count > 0 ? `🗑️ Hapus ${count} Item` : '🗑️ Hapus Terpilih';
+        };
+
+        window.selectAllFiles = (cb) => {
+            document.querySelectorAll('.file-checkbox').forEach(c => {
+                c.checked = cb.checked;
+                const id = c.dataset.id;
+                if (cb.checked) selectedFileSubmissions.add(id);
+                else selectedFileSubmissions.delete(id);
+            });
+            const count = selectedFileSubmissions.size;
+            const btn = document.getElementById('confirm-file-delete-btn');
+            if (btn) btn.innerText = count > 0 ? `🗑️ Hapus ${count} Item` : '🗑️ Hapus Terpilih';
+        };
+
+        window.confirmFileDelete = async () => {
+            if (selectedFileSubmissions.size === 0) return alert('Pilih setidaknya 1 file untuk dihapus');
+            if (!confirm(`Yakin ingin menghapus ${selectedFileSubmissions.size} file secara permanen?`)) return;
+            const appId = "edu-exam-2026";
+            try {
+                for (const id of selectedFileSubmissions) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'file_submissions', id));
+                }
+                showNotif(`✅ ${selectedFileSubmissions.size} file berhasil dihapus.`);
+                selectedFileSubmissions.clear();
+                fileDeleteMode = false;
+                updateModeUI();
+                await loadFileSubmissions();
+            } catch (e) {
+                console.error(e);
+                alert("Gagal menghapus: " + e.message);
+            }
         };
 
         window.confirmDelete = async () => {
@@ -537,6 +620,12 @@
 
         // --- PRINT MODE ---
         window.togglePrintMode = () => {
+            const activeTab = getActiveTab();
+            if (activeTab === 'file') {
+                // Print tab file: langsung print semua baris yang terlihat
+                printFileTable();
+                return;
+            }
             printMode = !printMode;
             if (printMode) {
                 deleteMode = false;
@@ -545,6 +634,49 @@
             updateModeUI();
             renderSubmissionsTable();
         };
+
+        function printFileTable() {
+            const rows = document.querySelectorAll('#file-submissions-tbody tr');
+            if (rows.length === 0) return alert('Tidak ada data untuk diprint.');
+            let printContent = '<html><head><title>File Murid</title><style>';
+            printContent += '@media print { @page { margin: 1.5cm; } }';
+            printContent += 'body{font-family:Arial,sans-serif;font-size:12px;color:#000;}';
+            printContent += 'table{width:100%;border-collapse:collapse;}';
+            printContent += 'th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:middle;}';
+            printContent += 'th{background:#f3f4f6;font-weight:bold;font-size:11px;text-transform:uppercase;}';
+            printContent += 'h2{text-align:center;margin-bottom:12px;}';
+            printContent += '</style></head><body>';
+            printContent += '<h2>Daftar File Murid</h2>';
+            printContent += '<table><thead><tr>';
+            printContent += '<th>No</th><th>Nama Murid</th><th>Kelas/Semester</th><th>Email</th><th>Mata Pelajaran</th><th>Waktu</th><th>Jumlah File</th><th>Keterangan</th><th>Nilai (Guru)</th>';
+            printContent += '</tr></thead><tbody>';
+            rows.forEach((tr, i) => {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length < 7) return;
+                // Ambil kolom: nama, kelas, email, mapel, waktu, file(badge), keterangan, nilai
+                const offset = fileDeleteMode ? 1 : 0;
+                const nama = tds[offset].innerText.trim();
+                const kelas = tds[offset+1].innerText.trim();
+                const email = tds[offset+2].innerText.trim();
+                const mapel = tds[offset+3].innerText.trim();
+                const waktu = tds[offset+4].innerText.trim();
+                const fileBadge = tds[offset+5].innerText.trim();
+                const ket = tds[offset+6] ? tds[offset+6].innerText.trim() : '-';
+                const nilai = tds[offset+7] ? tds[offset+7].querySelector('input')?.value || '-' : '-';
+                printContent += '<tr>';
+                printContent += '<td>' + (i+1) + '</td>';
+                printContent += '<td>' + nama + '</td><td>' + kelas + '</td><td>' + email + '</td>';
+                printContent += '<td>' + mapel + '</td><td>' + waktu + '</td>';
+                printContent += '<td style="text-align:center;">' + fileBadge + '</td>';
+                printContent += '<td>' + ket + '</td><td>' + nilai + '</td>';
+                printContent += '</tr>';
+            });
+            printContent += '</tbody></table></body></html>';
+            const win = window.open('', '_blank');
+            win.document.write(printContent);
+            win.document.close();
+            win.print();
+        }
 
         window.confirmPrintSelected = async () => {
             if (selectedSubmissions.size === 0) return alert('Pilih setidaknya 1 data untuk diprint');
@@ -632,13 +764,15 @@
         function updateModeUI() {
             const deleteModeBar = document.getElementById('delete-mode-bar');
             const printModeBar = document.getElementById('print-mode-bar');
+            const fileDeleteModeBar = document.getElementById('file-delete-mode-bar');
             const deleteBtnEl = document.getElementById('delete-mode-btn');
             const printBtnEl = document.getElementById('print-mode-btn');
 
             deleteModeBar.classList.toggle('hidden', !deleteMode);
             printModeBar.classList.toggle('hidden', !printMode);
+            if (fileDeleteModeBar) fileDeleteModeBar.classList.toggle('hidden', !fileDeleteMode);
 
-            if (deleteMode) {
+            if (deleteMode || fileDeleteMode) {
                 deleteBtnEl.classList.add('bg-red-600','text-white');
                 deleteBtnEl.classList.remove('bg-red-100','text-red-700');
             } else {
@@ -673,10 +807,25 @@
             };
             const hasAny = Object.values(searchParams).some(v => v !== '');
             closeSearchModal();
-            if (!hasAny) {
-                renderSubmissionsTable();
+            const activeTab = getActiveTab();
+            if (activeTab === 'file') {
+                if (!hasAny) {
+                    renderFileTable();
+                } else {
+                    // Untuk file: gunakan studentName, subject, grade (kelas), examTitle sebagai keterangan
+                    renderFileTable('all', {
+                        studentName: searchParams.studentName,
+                        subject: searchParams.subject,
+                        grade: searchParams.grade,
+                        keterangan: searchParams.examTitle,
+                    });
+                }
             } else {
-                renderSubmissionsTable('all', searchParams);
+                if (!hasAny) {
+                    renderSubmissionsTable();
+                } else {
+                    renderSubmissionsTable('all', searchParams);
+                }
             }
         };
 
@@ -684,13 +833,23 @@
             ['search-student','search-subject','search-grade','search-title','search-id'].forEach(id => {
                 document.getElementById(id).value = '';
             });
-            renderSubmissionsTable();
+            const activeTab = getActiveTab();
+            if (activeTab === 'file') {
+                renderFileTable();
+            } else {
+                renderSubmissionsTable();
+            }
         };
 
         // --- DATE FILTER ---
         window.applyDateFilter = () => {
             const date = document.getElementById('filter-date').value;
-            renderSubmissionsTable(date || 'all');
+            const activeTab = getActiveTab();
+            if (activeTab === 'file') {
+                renderFileTable(date || 'all');
+            } else {
+                renderSubmissionsTable(date || 'all');
+            }
         };
 
         // --- UPDATE STATS ---
@@ -798,14 +957,20 @@
                     }
                 });
                 let finalScore = 0;
-                if (totalMax > 0) {
-                    const pgPart = (autoScore / totalMax) * 100;
-                    if (manualCount > 0) {
-                        const essayPart = manualTotal / manualCount;
-                        finalScore = Math.round((pgPart * 0.4) + (essayPart * 0.6));
-                    } else {
-                        finalScore = Math.round(pgPart);
-                    }
+                // Hitung hanya soal PG: benar / total_pg * 100
+                const pgQuestions = examData.questions.filter(q => q.type === 'pg');
+                const pgTotal = pgQuestions.length;
+                if (pgTotal > 0 && manualCount === 0) {
+                    // Semua soal PG
+                    finalScore = Math.round((autoScore / pgTotal) * 100);
+                } else if (pgTotal > 0 && manualCount > 0) {
+                    // Campuran PG + Esai
+                    const pgScore = (autoScore / pgTotal) * 100;
+                    const essayScore = manualTotal / manualCount;
+                    finalScore = Math.round((pgScore + essayScore) / 2);
+                } else if (manualCount > 0) {
+                    // Semua esai
+                    finalScore = Math.round(manualTotal / manualCount);
                 }
                 await updateDoc(subRef, { score: finalScore, status: 'graded' });
                 // Update cache lokal
@@ -953,6 +1118,664 @@
             }
         };
 
+        // --- HANDLE FILE CAPTURE (Multi-file carousel) ---
+        let selectedFiles = []; // array of File objects
+
+        window.handleFileCapture = (input) => {
+            if (!input.files.length) return;
+            const file = input.files[0];
+            selectedFiles.push(file);
+            renderFileCarousel();
+            input.value = ''; // reset agar bisa pilih file sama lagi
+        };
+
+        function renderFileCarousel() {
+            const track = document.getElementById('file-carousel-track');
+            const carousel = document.getElementById('file-carousel');
+            const placeholder = document.getElementById('upload-placeholder');
+            const addMore = document.getElementById('add-more-btn-area');
+            const submitBtn = document.getElementById('btn-submit-file');
+
+            track.innerHTML = '';
+
+            if (selectedFiles.length === 0) {
+                carousel.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                addMore.classList.add('hidden');
+                submitBtn.classList.add('hidden');
+                return;
+            }
+
+            // Sembunyikan placeholder, tampilkan carousel & tombol tambah
+            placeholder.classList.add('hidden');
+            carousel.classList.remove('hidden');
+            addMore.classList.remove('hidden');
+            submitBtn.classList.remove('hidden');
+
+            selectedFiles.forEach((file, idx) => {
+                const url = URL.createObjectURL(file);
+                const card = document.createElement('div');
+                card.className = 'relative flex-shrink-0 rounded-xl overflow-hidden bg-gray-600';
+                card.style.cssText = 'width:140px;min-width:140px;scroll-snap-align:start;';
+
+                let mediaHtml = '';
+                if (file.type.startsWith('image/')) {
+                    mediaHtml = `<img src="${url}" class="w-full object-cover" style="height:120px;">`;
+                } else if (file.type.startsWith('video/')) {
+                    mediaHtml = `<video src="${url}" class="w-full object-cover" style="height:120px;" muted playsinline></video>`;
+                } else {
+                    mediaHtml = `<div class="flex flex-col items-center justify-center" style="height:120px;">
+                        <i class="fas fa-file text-3xl text-yellow-400 mb-1"></i>
+                        <p class="text-white text-xs text-center px-2 truncate w-full">${file.name}</p>
+                    </div>`;
+                }
+
+                card.innerHTML = `
+                    ${mediaHtml}
+                    <div class="p-1">
+                        <p class="text-white text-xs truncate">${file.name}</p>
+                        <p class="text-gray-400 text-xs">${(file.size/1024).toFixed(0)} KB</p>
+                    </div>
+                    <button onclick="hapusFile(${idx})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg"
+                        style="font-size:11px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                track.appendChild(card);
+            });
+        }
+
+        window.hapusFile = (idx) => {
+            selectedFiles.splice(idx, 1);
+            renderFileCarousel();
+        };
+
+        // Hapus fungsi lama yang tidak dipakai lagi
+        window.batalFile = () => {
+            selectedFiles = [];
+            renderFileCarousel();
+        };
+        window.konfirmasiFile = () => {};
+        // --- HELPER: Kompres gambar ke base64 agar tidak melebihi batas Firestore ---
+        async function fileToBase64Compressed(file) {
+            return new Promise((resolve, reject) => {
+                // Jika bukan gambar, langsung baca sebagai base64 biasa
+                if (!file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                    return;
+                }
+                // Gambar: kompres dengan canvas agar ukurannya kecil
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // Maksimal lebar/tinggi 1200px agar file kecil
+                        const MAX = 1200;
+                        let w = img.width, h = img.height;
+                        if (w > MAX || h > MAX) {
+                            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                            else { w = Math.round(w * MAX / h); h = MAX; }
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        // Kualitas 0.75 cukup bagus dan ukuran jauh lebih kecil
+                        resolve(canvas.toDataURL('image/jpeg', 0.75));
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- BATAS UKURAN FILE (standar WhatsApp) ---
+        // Gambar: 16 MB, Video: 64 MB, Dokumen: 100 MB
+        const FILE_LIMITS = {
+            image: 16 * 1024 * 1024,
+            video: 64 * 1024 * 1024,
+            document: 100 * 1024 * 1024
+        };
+
+        function getFileCategory(file) {
+            if (file.type.startsWith('image/')) return 'image';
+            if (file.type.startsWith('video/')) return 'video';
+            return 'document';
+        }
+
+        function getFileLimitLabel(cat) {
+            if (cat === 'image') return '16 MB';
+            if (cat === 'video') return '64 MB';
+            return '100 MB';
+        }
+
+        // --- UPLOAD FILE MURID (Multi-file, batas seperti WhatsApp) ---
+        window.submitFileUpload = async () => {
+            if (selectedFiles.length === 0) return alert('Pilih file terlebih dahulu!');
+
+            // Validasi ukuran sebelum upload
+            const terlalubesar = [];
+            for (const file of selectedFiles) {
+                const cat = getFileCategory(file);
+                if (file.size > FILE_LIMITS[cat]) {
+                    terlalubesar.push({ file, cat });
+                }
+            }
+            if (terlalubesar.length > 0) {
+                const detail = terlalubesar.map((x, i) => {
+                    const nomorFile = selectedFiles.indexOf(x.file) + 1;
+                    const ukuran = (x.file.size / 1024 / 1024).toFixed(2);
+                    const batas = getFileLimitLabel(x.cat);
+                    return `File ke-${nomorFile} (${x.file.name})\nUkuran: ${ukuran} MB | Batas: ${batas}`;
+                }).join('\n\n');
+                alert(`⚠️ File berikut melebihi batas ukuran:\n\n${detail}\n\nTolong kompres atau pilih file yang lebih kecil sebelum upload.`);
+                return;
+            }
+
+            const keterangan = document.getElementById('murid-keterangan').value.trim();
+            const subject = document.getElementById('murid-subject').value.trim();
+            const teacherId = localStorage.getItem('targetTeacherId');
+            const studentName = localStorage.getItem('studentName');
+            const studentEmail = localStorage.getItem('studentEmail') || '';
+            const studentKelas = localStorage.getItem('studentKelas') || '';
+
+            const btn = document.getElementById('btn-submit-file');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengupload...';
+            btn.disabled = true;
+
+            let berhasil = 0;
+            const gagalDetail = []; // [{nomorFile, nama, alasan}]
+            const gagalIndeks = []; // indeks file yang gagal di selectedFiles
+
+            try {
+                const appId = "edu-exam-2026";
+                // Proses semua file: kompres dan baca base64
+                const filesPayload = []; // [{name, type, data}] yang berhasil
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Memproses file ke-${i+1} dari ${selectedFiles.length}...`;
+                    try {
+                        const fileData = await fileToBase64Compressed(file);
+                        const base64Size = fileData.length * 0.75;
+                        if (base64Size > 900 * 1024) {
+                            throw new Error('Ukuran data terlalu besar untuk disimpan. Kompres file terlebih dahulu.');
+                        }
+                        filesPayload.push({ name: file.name, type: file.type, data: fileData });
+                        berhasil++;
+                    } catch(err) {
+                        console.error('Gagal proses file ke-' + (i+1) + ':', file.name, err);
+                        let alasan = 'Gagal tidak diketahui';
+                        if (err.message && err.message.toLowerCase().includes('quota')) alasan = 'Kuota penyimpanan penuh';
+                        else if (err.message && err.message.toLowerCase().includes('besar')) alasan = err.message;
+                        else if (err.message && err.message.toLowerCase().includes('network')) alasan = 'Koneksi internet terputus';
+                        else if (err.message) alasan = err.message;
+                        gagalDetail.push({ nomorFile: i+1, nama: file.name, alasan });
+                        gagalIndeks.push(i);
+                    }
+                }
+
+                // Simpan semua file yang berhasil dalam SATU dokumen Firestore
+                if (filesPayload.length > 0) {
+                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan ke server...`;
+                    try {
+                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'file_submissions'), {
+                            teacherId, studentName, studentEmail, studentKelas,
+                            subject, keterangan,
+                            // Simpan semua file sebagai array dalam 1 dokumen
+                            filesArray: filesPayload,
+                            // Backward compat: simpan file pertama di field lama
+                            fileName: filesPayload[0].name,
+                            fileType: filesPayload[0].type,
+                            fileData: filesPayload[0].data,
+                            fileCount: filesPayload.length,
+                            timestamp: serverTimestamp(),
+                            dateStr: new Date().toISOString().split('T')[0],
+                            timeStr: new Date().toLocaleTimeString(),
+                            nilaiGuru: '', status: 'uploaded'
+                        });
+                    } catch(saveErr) {
+                        // Jika 1 dokumen terlalu besar, simpan per file
+                        console.warn('Simpan 1 dokumen gagal, coba per file:', saveErr);
+                        for (const fp of filesPayload) {
+                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'file_submissions'), {
+                                teacherId, studentName, studentEmail, studentKelas,
+                                subject, keterangan,
+                                filesArray: [fp],
+                                fileName: fp.name, fileType: fp.type, fileData: fp.data,
+                                fileCount: 1,
+                                timestamp: serverTimestamp(),
+                                dateStr: new Date().toISOString().split('T')[0],
+                                timeStr: new Date().toLocaleTimeString(),
+                                nilaiGuru: '', status: 'uploaded'
+                            });
+                        }
+                    }
+                }
+
+                if (berhasil > 0 && gagalDetail.length === 0) {
+                    alert('✅ Semua ' + berhasil + ' file berhasil diupload!');
+                    selectedFiles = [];
+                    renderFileCarousel();
+                    document.getElementById('upload-file-screen').classList.add('hidden');
+                    document.getElementById('login-screen').classList.remove('hidden');
+                } else if (berhasil > 0 && gagalDetail.length > 0) {
+                    const detailGagal = gagalDetail.map(g =>
+                        `❌ File ke-${g.nomorFile} (${g.nama})\n   Penyebab: ${g.alasan}`
+                    ).join('\n\n');
+                    alert(`✅ ${berhasil} file berhasil diupload.\n\n⚠️ ${gagalDetail.length} file GAGAL:\n\n${detailGagal}\n\nFile yang gagal masih ada di halaman upload. Silakan coba lagi.`);
+                    const indeksGagalSet = new Set(gagalIndeks);
+                    selectedFiles = selectedFiles.filter((_, idx) => indeksGagalSet.has(idx));
+                    renderFileCarousel();
+                } else {
+                    const detailGagal = gagalDetail.map(g =>
+                        `❌ File ke-${g.nomorFile} (${g.nama})\n   Penyebab: ${g.alasan}`
+                    ).join('\n\n');
+                    alert(`❌ Semua file gagal diupload!\n\n${detailGagal}`);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Gagal upload: ' + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim File';
+                btn.disabled = false;
+            }
+        };
+
+        // --- LOAD FILE SUBMISSIONS (untuk tabel file murid) ---
+        let allFileSubmissionsCache = [];
+        async function loadFileSubmissions() {
+            if (!currentUser) return;
+            const appId = "edu-exam-2026";
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'file_submissions'), where("teacherId", "==", currentUser.uid));
+            const snap = await getDocs(q);
+            allFileSubmissionsCache = [];
+            snap.forEach(d => allFileSubmissionsCache.push({ id: d.id, ...d.data() }));
+            renderFileTable();
+        }
+
+        function renderFileTable(filterDate = 'all', searchParams = null) {
+            const tbody = document.getElementById('file-submissions-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            // Update header: tambah/hapus kolom checkbox
+            const thead = document.getElementById('file-submissions-thead');
+            if (thead) {
+                const existingCbTh = thead.querySelector('.file-checkbox-th');
+                if (fileDeleteMode) {
+                    if (!existingCbTh) {
+                        const th = document.createElement('th');
+                        th.className = 'p-3 file-checkbox-th border border-gray-200';
+                        th.innerHTML = '<input type="checkbox" id="select-all-files-cb" onchange="selectAllFiles(this)" class="w-4 h-4">';
+                        thead.insertBefore(th, thead.firstChild);
+                    }
+                } else {
+                    if (existingCbTh) existingCbTh.remove();
+                }
+            }
+
+            // Filter berdasarkan tanggal dan search
+            let filteredFile = allFileSubmissionsCache.filter(sub => {
+                if (filterDate !== 'all' && sub.dateStr !== filterDate) return false;
+                if (searchParams) {
+                    const sp = searchParams;
+                    if (sp.studentName && !sub.studentName?.toLowerCase().includes(sp.studentName.toLowerCase())) return false;
+                    if (sp.subject && !sub.subject?.toLowerCase().includes(sp.subject.toLowerCase())) return false;
+                    if (sp.grade && !sub.studentKelas?.toLowerCase().includes(sp.grade.toLowerCase())) return false;
+                    if (sp.keterangan && !sub.keterangan?.toLowerCase().includes(sp.keterangan.toLowerCase())) return false;
+                }
+                return true;
+            });
+
+            // Setiap dokumen Firestore = 1 baris (1 sesi upload = 1 dokumen)
+            // filesArray berisi semua file dalam sesi itu
+            filteredFile.forEach(sub => {
+                // Kumpulkan semua file dari dokumen ini
+                const files = [];
+                if (sub.filesArray && Array.isArray(sub.filesArray)) {
+                    sub.filesArray.forEach(f => files.push({ name: f.name, type: f.type, data: f.data, url: null }));
+                } else if (sub.fileData) {
+                    // Format lama: 1 dokumen = 1 file
+                    files.push({ name: sub.fileName, type: sub.fileType, data: sub.fileData, url: null });
+                } else if (sub.files && Array.isArray(sub.files)) {
+                    sub.files.forEach(f => files.push({ name: f.name, type: null, data: null, url: f.url }));
+                }
+
+                const checkboxCell = fileDeleteMode
+                    ? `<td class="p-3 border border-gray-200">
+                          <input type="checkbox" class="file-checkbox w-4 h-4 accent-blue-600 cursor-pointer"
+                              data-id="${sub.id}" onchange="toggleFileSelection('${sub.id}')">
+                       </td>`
+                    : '';
+
+                const jumlahFile = files.length;
+                // Encode files ke JSON untuk dikirim ke fungsi periksa
+                const filesEncoded = encodeURIComponent(JSON.stringify(files));
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b hover:bg-gray-50';
+                tr.innerHTML = `
+                    ${checkboxCell}
+                    <td class="p-3 border border-gray-200 font-medium text-gray-900">${sub.studentName || '-'}</td>
+                    <td class="p-3 border border-gray-200 text-gray-900">${sub.studentKelas || '-'}</td>
+                    <td class="p-3 border border-gray-200 text-xs text-gray-700">${sub.studentEmail || '-'}</td>
+                    <td class="p-3 border border-gray-200 text-gray-900">${sub.subject || '-'}</td>
+                    <td class="p-3 border border-gray-200 text-sm text-gray-900">${sub.dateStr || ''}<br><span class="text-xs text-gray-400">${sub.timeStr || ''}</span></td>
+                    <td class="p-3 border border-gray-200 text-center">
+                        <button onclick="periksaSemuaFile('${sub.id}')"
+                            class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold px-4 py-1.5 rounded-full text-sm flex items-center gap-1 mx-auto"
+                            style="min-width:90px; justify-content:center;">
+                            <i class="fas fa-folder-open"></i> Periksa
+                            ${jumlahFile > 1 ? `<span class="bg-indigo-500 text-white text-xs rounded-full px-1.5 ml-1">${jumlahFile}</span>` : ''}
+                        </button>
+                    </td>
+                    <td class="p-3 border border-gray-200 text-xs text-gray-700">${sub.keterangan || '-'}</td>
+                    <td class="p-3 border border-gray-200">
+                        <input type="number" value="${sub.nilaiGuru || ''}" min="0" max="100" placeholder="0-100"
+                            class="w-16 p-1 border rounded text-sm" onchange="saveNilaiFile('${sub.id}', this.value)">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // State untuk file aktif yang sedang diperiksa
+        let _periksaFiles = [];
+
+        window.switchPeriksaTab = function(idx) {
+            for (var i = 0; i < _periksaFiles.length; i++) {
+                var btn = document.getElementById('periksa-tab-btn-' + i);
+                if (!btn) continue;
+                if (i === idx) {
+                    btn.style.background = '#4f46e5';
+                    btn.style.color = 'white';
+                    btn.style.borderColor = '#4f46e5';
+                } else {
+                    btn.style.background = 'white';
+                    btn.style.color = '#374151';
+                    btn.style.borderColor = '#d1d5db';
+                }
+            }
+            var area = document.getElementById('periksa-preview-area');
+            if (area) renderPeriksaFile(_periksaFiles, idx, area);
+        };
+
+        window.tutupPeriksaModal = function() {
+            var m = document.getElementById('periksa-modal-overlay');
+            if (m) m.remove();
+        };
+
+        // Fungsi untuk membuka modal "Periksa" semua file dalam 1 sesi upload
+        window.periksaSemuaFile = function(subId) {
+            var sub = null;
+            for (var i = 0; i < allFileSubmissionsCache.length; i++) {
+                if (allFileSubmissionsCache[i].id === subId) { sub = allFileSubmissionsCache[i]; break; }
+            }
+            if (!sub) { alert('Data tidak ditemukan.'); return; }
+
+            var allFiles = [];
+            if (sub.filesArray && Array.isArray(sub.filesArray) && sub.filesArray.length > 0) {
+                for (var j = 0; j < sub.filesArray.length; j++) {
+                    var ff = sub.filesArray[j];
+                    allFiles.push({ name: ff.name, type: ff.type, data: ff.data, url: null });
+                }
+            } else if (sub.fileData) {
+                allFiles.push({ name: sub.fileName || 'File', type: sub.fileType, data: sub.fileData, url: null });
+            } else if (sub.files && Array.isArray(sub.files)) {
+                for (var k = 0; k < sub.files.length; k++) {
+                    allFiles.push({ name: sub.files[k].name, type: null, data: null, url: sub.files[k].url });
+                }
+            }
+
+            if (allFiles.length === 0) { alert('Tidak ada file yang bisa diperiksa.'); return; }
+
+            _periksaFiles = allFiles;
+
+            var namaInfo = (sub.studentName || '-') + ' — ' + (sub.subject || '') + (sub.keterangan ? ' | ' + sub.keterangan : '');
+
+            var oldModal = document.getElementById('periksa-modal-overlay');
+            if (oldModal) oldModal.remove();
+
+            var overlay = document.createElement('div');
+            overlay.id = 'periksa-modal-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);';
+
+            var modalBox = document.createElement('div');
+            modalBox.style.cssText = 'background:white;border-radius:16px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 25px 50px rgba(0,0,0,0.3);overflow:hidden;';
+
+            var header = document.createElement('div');
+            header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;';
+            header.innerHTML = '<div><p style="font-weight:700;font-size:15px;color:#1f2937;"><i class=\'fas fa-folder-open\' style=\'color:#6366f1;margin-right:8px;\'></i>' + namaInfo + '</p><p style="font-size:11px;color:#9ca3af;margin-top:2px;">' + allFiles.length + ' file diunggah</p></div><button onclick=\'tutupPeriksaModal()\' style=\'font-size:24px;color:#9ca3af;background:none;border:none;cursor:pointer;line-height:1;padding:0 4px;\'>&times;</button>';
+            modalBox.appendChild(header);
+
+            if (allFiles.length > 1) {
+                var tabBar = document.createElement('div');
+                tabBar.style.cssText = 'display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;overflow-x:auto;flex-shrink:0;background:#f9fafb;';
+                for (var t = 0; t < allFiles.length; t++) {
+                    var tabBtn = document.createElement('button');
+                    tabBtn.id = 'periksa-tab-btn-' + t;
+                    var shortName = allFiles[t].name.length > 22 ? allFiles[t].name.substring(0,20) + '...' : allFiles[t].name;
+                    tabBtn.textContent = (t+1) + '. ' + shortName;
+                    tabBtn.style.cssText = 'padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid #d1d5db;transition:all 0.15s;';
+                    if (t === 0) { tabBtn.style.background = '#4f46e5'; tabBtn.style.color = 'white'; tabBtn.style.borderColor = '#4f46e5'; }
+                    else { tabBtn.style.background = 'white'; tabBtn.style.color = '#374151'; }
+                    tabBtn.setAttribute('onclick', 'switchPeriksaTab(' + t + ')');
+                    tabBar.appendChild(tabBtn);
+                }
+                modalBox.appendChild(tabBar);
+            }
+
+            var previewArea = document.createElement('div');
+            previewArea.id = 'periksa-preview-area';
+            previewArea.style.cssText = 'flex:1;overflow:auto;padding:16px;min-height:200px;';
+            modalBox.appendChild(previewArea);
+
+            overlay.appendChild(modalBox);
+            document.body.appendChild(overlay);
+
+            setTimeout(function() { renderPeriksaFile(allFiles, 0, previewArea); }, 0);
+        };
+
+        function renderPeriksaFile(allFiles, idx, container) {
+            const f = allFiles[idx];
+            container.innerHTML = '';
+
+            const ext = f.name.split('.').pop().toLowerCase();
+            const src = f.data || f.url || '';
+
+            if (!src) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-10">File tidak tersedia.</p>';
+                return;
+            }
+
+            if (f.type && f.type.startsWith('image/') || ['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) {
+                container.innerHTML = `<div class="flex justify-center"><img src="${src}" style="max-width:100%;max-height:70vh;border-radius:8px;" alt="${f.name}"></div>`;
+            } else if (f.type && f.type.startsWith('video/') || ['mp4','webm','ogg','mov','avi','mkv'].includes(ext)) {
+                container.innerHTML = `<video src="${src}" controls style="width:100%;max-height:70vh;border-radius:8px;" playsinline></video>`;
+            } else if (ext === 'pdf') {
+                // Jika base64, buat object URL; jika URL biasa langsung pakai
+                let pdfSrc = src;
+                if (src.startsWith('data:')) {
+                    // base64 → blob URL
+                    try {
+                        const byteStr = atob(src.split(',')[1]);
+                        const arr = new Uint8Array(byteStr.length);
+                        for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+                        const blob = new Blob([arr], { type: 'application/pdf' });
+                        pdfSrc = URL.createObjectURL(blob);
+                    } catch(e) {}
+                }
+                container.innerHTML = `<iframe src="${pdfSrc}" style="width:100%;height:70vh;border:none;border-radius:8px;"></iframe>`;
+            } else if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) {
+                // Google Docs Viewer untuk dokumen Office
+                const viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(src)}&embedded=true`;
+                container.innerHTML = `<iframe src="${viewerUrl}" style="width:100%;height:70vh;border:none;border-radius:8px;"></iframe>`;
+            } else if (ext === 'txt') {
+                if (src.startsWith('data:')) {
+                    try {
+                        const text = atob(src.split(',')[1]);
+                        container.innerHTML = `<pre class="bg-gray-50 p-4 rounded-xl text-sm overflow-auto" style="max-height:65vh;">${text}</pre>`;
+                    } catch(e) { container.innerHTML = '<p class="text-red-500">Gagal membuka file teks.</p>'; }
+                } else {
+                    fetch(src).then(r => r.text()).then(text => {
+                        container.innerHTML = `<pre class="bg-gray-50 p-4 rounded-xl text-sm overflow-auto" style="max-height:65vh;">${text.substring(0,5000)}</pre>`;
+                    }).catch(() => {
+                        container.innerHTML = '<p class="text-red-500">Gagal memuat file.</p>';
+                    });
+                }
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-10">
+                        <i class="fas fa-file text-5xl text-gray-300 mb-4 block"></i>
+                        <p class="text-gray-600 mb-3">Format <b>${ext.toUpperCase()}</b> tidak dapat ditampilkan langsung.</p>
+                        <a href="${src}" download="${f.name}"
+                            class="inline-block bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-indigo-700">
+                            <i class="fas fa-download mr-1"></i> Unduh File
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        window.saveNilaiFile = async (id, nilai) => {
+            const appId = "edu-exam-2026";
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'file_submissions', id), { nilaiGuru: nilai });
+            showNotif('✅ Nilai file disimpan: ' + nilai);
+        };
+
+        window.previewFileModal = (fileUrl, fileName) => {
+            const ext = fileName.split('.').pop().toLowerCase();
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-auto shadow-xl">
+                    <div class="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
+                        <h2 class="text-lg font-bold text-gray-800">${fileName}</h2>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+                    </div>
+                    <div id="preview-content" class="p-6">
+                        <div class="flex items-center justify-center h-40">
+                            <p class="text-gray-500"><i class="fas fa-spinner fa-spin"></i> Memuat preview...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            const previewContent = document.getElementById('preview-content');
+            
+            if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+                previewContent.innerHTML = `
+                    <iframe src="https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true" 
+                            style="width:100%; height:500px; border:none;"></iframe>
+                `;
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                previewContent.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="${fileUrl}" style="max-width:100%; max-height:500px; border-radius:8px;" alt="${fileName}">
+                    </div>
+                `;
+            } else if (['txt'].includes(ext)) {
+                fetch(fileUrl)
+                    .then(r => r.text())
+                    .then(text => {
+                        previewContent.innerHTML = `<pre class="bg-gray-100 p-4 rounded overflow-auto text-sm">${text.substring(0, 5000)}</pre>`;
+                    })
+                    .catch(() => {
+                        previewContent.innerHTML = `<p class="text-red-600">Gagal memuat. <a href="${fileUrl}" download class="text-blue-600 underline">Download saja</a></p>`;
+                    });
+            } else {
+                previewContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <p class="text-gray-600 mb-4">Format file ${ext.toUpperCase()} tidak didukung preview.</p>
+                        <a href="${fileUrl}" download class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            <i class="fas fa-download"></i> Download File
+                        </a>
+                    </div>
+                `;
+            }
+        };
+
+        window.deleteFileRow = async (id) => {
+            if (!confirm('Hapus file submission ini?')) return;
+            try {
+                const appId = "edu-exam-2026";
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'file_submissions', id));
+                await loadFileSubmissions();
+                showNotif('✅ File berhasil dihapus.');
+            } catch (e) {
+                console.error(e);
+                alert('Gagal menghapus: ' + e.message);
+            }
+        };
+
+        window.deleteFileSubmission = async (id) => {
+            if (!confirm('Hapus file ini permanen?')) return;
+            const appId = "edu-exam-2026";
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'file_submissions', id));
+                await loadFileSubmissions();
+                showNotif('✅ File berhasil dihapus.');
+            } catch(e) {
+                console.error(e);
+                alert('Gagal menghapus: ' + e.message);
+            }
+        };
+
+        window.viewFile = (id) => {
+            const sub = allFileSubmissionsCache.find(s => s.id === id);
+            if (!sub || !sub.fileData) return;
+            const win = window.open('', '_blank');
+            if (sub.fileType.startsWith('image/')) {
+                win.document.write(`<img src="${sub.fileData}" style="max-width:100%">`);
+            } else if (sub.fileType.startsWith('video/')) {
+                win.document.write(`<video src="${sub.fileData}" controls style="max-width:100%"></video>`);
+            } else {
+                const link = win.document.createElement('a');
+                link.href = sub.fileData;
+                link.download = sub.fileName;
+                link.click();
+            }
+        };
+
+        window.switchTab = (tab) => {
+            const jawaban = document.getElementById('tab-jawaban');
+            const file = document.getElementById('tab-file');
+            const btnJ = document.getElementById('btn-tab-jawaban');
+            const btnF = document.getElementById('btn-tab-file');
+
+            // Reset semua mode saat pindah tab
+            deleteMode = false;
+            fileDeleteMode = false;
+            printMode = false;
+            selectedSubmissions.clear();
+            selectedFileSubmissions.clear();
+            updateModeUI();
+
+            if (tab === 'jawaban') {
+                jawaban.classList.remove('hidden');
+                file.classList.add('hidden');
+                btnJ.classList.add('bg-blue-600','text-white');
+                btnJ.classList.remove('bg-gray-100','text-gray-700');
+                btnF.classList.add('bg-gray-100','text-gray-700');
+                btnF.classList.remove('bg-blue-600','text-white');
+                renderSubmissionsTable();
+            } else {
+                file.classList.remove('hidden');
+                jawaban.classList.add('hidden');
+                btnF.classList.add('bg-blue-600','text-white');
+                btnF.classList.remove('bg-gray-100','text-gray-700');
+                btnJ.classList.add('bg-gray-100','text-gray-700');
+                btnJ.classList.remove('bg-blue-600','text-white');
+                loadFileSubmissions();
+            }
+        };
         // --- NOTIFIKASI ---
         function showNotif(msg) {
             const el = document.getElementById('notif-bar');
@@ -1033,7 +1856,8 @@
                     </button>
                     <div id="murid-form" class="hidden space-y-2">
                         <input id="student-name" type="text" placeholder="Nama Lengkap Murid" class="w-full px-4 py-2.5 rounded-xl border border-blue-300 focus:ring-2 focus:ring-white outline-none text-sm">
-                        <input id="student-teacher-id" type="text" placeholder="ID Soal (Dari Guru Anda, contoh: EDU-XXXXXXXX)" class="w-full px-4 py-2.5 rounded-xl border border-blue-300 focus:ring-2 focus:ring-white outline-none text-sm">
+                        <input id="student-teacher-id" type="text" placeholder="ID Soal atau ID Guru (contoh: EDU-XXXXXXXX)" class="w-full px-4 py-2.5 rounded-xl border border-blue-300 focus:ring-2 focus:ring-white outline-none text-sm">
+                        <input id="student-kelas" type="text" placeholder="Kelas / Semester (contoh: 6C / Semester 1)" class="w-full px-4 py-2.5 rounded-xl border border-blue-300 focus:ring-2 focus:ring-white outline-none text-sm">
                         <button id="btn-masuk-ujian" onclick="loginMurid()" class="w-full bg-gray-800 text-white py-2.5 rounded-xl font-bold hover:bg-gray-900 transition-all text-sm">
                             Masuk Ujian
                         </button>
@@ -1065,9 +1889,8 @@
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-right hidden md:block">
-                    <!-- ID guru tidak ditampilkan di navbar -->
                     <p class="text-sm font-bold" id="teacher-name-display">-</p>
-                    <p class="text-xs text-gray-400">Guru EduSmart</p>
+                    <p class="text-xs text-gray-400">Guru EduSmart | ID: <span id="teacher-id-display" class="font-mono select-all cursor-pointer" title="Klik untuk salin"></span></p>
                 </div>
                 <button onclick="logout()" class="text-red-500 hover:bg-red-50 p-2 rounded-full" title="Logout">
                     <i class="fas fa-power-off"></i>
@@ -1205,61 +2028,97 @@
                 <!-- View: Submissions/Evaluasi -->
                 <div id="submissions-view" class="view-section hidden space-y-4">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border overflow-hidden">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
                             <h2 class="text-xl font-bold">Monitor & Evaluasi Murid</h2>
                             <div class="flex flex-wrap gap-2">
-                                <!-- Filter Tanggal -->
                                 <input type="date" id="filter-date" onchange="applyDateFilter()" class="p-2 border rounded-lg text-sm">
-                                <!-- Tombol Cari -->
                                 <button onclick="openSearchModal()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm flex items-center gap-1 hover:bg-gray-200">
                                     <i class="fas fa-search"></i> Cari
                                 </button>
-                                <!-- Tombol Print -->
                                 <button id="print-mode-btn" onclick="togglePrintMode()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm flex items-center gap-1 hover:bg-gray-200">
                                     <i class="fas fa-print"></i> Print
                                 </button>
-                                <!-- Tombol Hapus -->
                                 <button id="delete-mode-btn" onclick="toggleDeleteMode()" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm flex items-center gap-1 hover:bg-red-200">
                                     <i class="fas fa-trash"></i> Hapus
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Delete Mode Bar -->
-                        <div id="delete-mode-bar" class="hidden mb-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
-                            <span class="text-sm text-red-700 font-medium"><i class="fas fa-info-circle mr-1"></i>Mode Hapus aktif. Centang baris yang ingin dihapus.</span>
-                            <div class="flex gap-2">
-                                <button id="confirm-delete-btn" onclick="confirmDelete()" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-red-700">🗑️ Hapus Terpilih</button>
-                                <button onclick="toggleDeleteMode()" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm">Batal</button>
+                        <!-- TAB SWITCHER -->
+                        <div class="flex gap-2 mb-4">
+                            <button id="btn-tab-jawaban" onclick="switchTab('jawaban')" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-semibold text-sm">
+                                📝 Jawaban Murid
+                            </button>
+                            <button id="btn-tab-file" onclick="switchTab('file')" class="bg-gray-100 text-gray-700 px-5 py-2 rounded-xl font-semibold text-sm hover:bg-gray-200">
+                                📁 File Murid
+                            </button>
+                        </div>
+
+                        <!-- TAB JAWABAN -->
+                        <div id="tab-jawaban">
+                            <!-- Delete Mode Bar -->
+                            <div id="delete-mode-bar" class="hidden mb-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
+                                <span class="text-sm text-red-700 font-medium"><i class="fas fa-info-circle mr-1"></i>Mode Hapus aktif. Centang baris yang ingin dihapus.</span>
+                                <div class="flex gap-2">
+                                    <button id="confirm-delete-btn" onclick="confirmDelete()" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-red-700">🗑️ Hapus Terpilih</button>
+                                    <button onclick="toggleDeleteMode()" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm">Batal</button>
+                                </div>
+                            </div>
+                            <!-- Print Mode Bar -->
+                            <div id="print-mode-bar" class="hidden mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+                                <span class="text-sm text-blue-700 font-medium"><i class="fas fa-info-circle mr-1"></i>Mode Print aktif. Centang baris yang ingin diprint.</span>
+                                <div class="flex gap-2">
+                                    <button id="confirm-print-btn" onclick="confirmPrintSelected()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700">🖨️ Print Terpilih</button>
+                                    <button onclick="togglePrintMode()" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm">Batal</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm border border-gray-200">
+                                    <thead class="bg-gray-100 text-gray-800 text-xs uppercase font-bold border border-gray-200" id="submissions-thead">
+                                        <tr>
+                                            <th class="p-3 border border-gray-200">Nama Murid</th>
+                                            <th class="p-3 border border-gray-200">Kelas/Semester</th>
+                                            <th class="p-3 border border-gray-200">Email</th>
+                                            <th class="p-3 border border-gray-200">Mata Pelajaran</th>
+                                            <th class="p-3 border border-gray-200">Judul Soal</th>
+                                            <th class="p-3 border border-gray-200 text-center">Jml Soal</th>
+                                            <th class="p-3 border border-gray-200">Waktu Pengerjaan</th>
+                                            <th class="p-3 border border-gray-200 text-center">Nilai</th>
+                                            <th class="p-3 border border-gray-200">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="submissions-table-body"></tbody>
+                                </table>
                             </div>
                         </div>
 
-                        <!-- Print Mode Bar -->
-                        <div id="print-mode-bar" class="hidden mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
-                            <span class="text-sm text-blue-700 font-medium"><i class="fas fa-info-circle mr-1"></i>Mode Print aktif. Centang baris yang ingin diprint.</span>
-                            <div class="flex gap-2">
-                                <button id="confirm-print-btn" onclick="confirmPrintSelected()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700">🖨️ Print Terpilih</button>
-                                <button onclick="togglePrintMode()" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm">Batal</button>
+                        <!-- TAB FILE -->
+                        <div id="tab-file" class="hidden">
+                            <!-- File Delete Mode Bar -->
+                            <div id="file-delete-mode-bar" class="hidden mb-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
+                                <span class="text-sm text-red-700 font-medium"><i class="fas fa-info-circle mr-1"></i>Mode Hapus aktif. Centang baris file yang ingin dihapus.</span>
+                                <div class="flex gap-2">
+                                    <button id="confirm-file-delete-btn" onclick="confirmFileDelete()" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-red-700">&#128465;&#65039; Hapus Terpilih</button>
+                                    <button onclick="toggleDeleteMode()" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm">Batal</button>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-sm border border-gray-200">
-                                <thead class="bg-gray-100 text-gray-800 text-xs uppercase font-bold border border-gray-200" id="submissions-thead">
-                                    <tr>
-                                        <th class="p-3 border border-gray-200">Nama Murid</th>
-                                        <th class="p-3 border border-gray-200">Email</th>
-                                        <th class="p-3 border border-gray-200">Mata Pelajaran</th>
-                                        <th class="p-3 border border-gray-200">Judul Soal</th>
-                                        <th class="p-3 border border-gray-200 text-center">Jml Soal</th>
-                                        <th class="p-3 border border-gray-200">Waktu Pengerjaan</th>
-                                        <th class="p-3 border border-gray-200 text-center">Nilai</th>
-                                        <th class="p-3 border border-gray-200">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="submissions-table-body">
-                                </tbody>
-                            </table>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm border border-gray-200">
+                                    <thead id="file-submissions-thead" class="bg-gray-100 text-gray-800 text-xs uppercase font-bold border border-gray-200">
+                                        <tr>
+                                            <th class="p-3 border border-gray-200">Nama Murid</th>
+                                            <th class="p-3 border border-gray-200">Kelas/Semester</th>
+                                            <th class="p-3 border border-gray-200">Email</th>
+                                            <th class="p-3 border border-gray-200">Mata Pelajaran</th>
+                                            <th class="p-3 border border-gray-200">Waktu Pengerjaan</th>
+                                            <th class="p-3 border border-gray-200 text-center">File</th>
+                                            <th class="p-3 border border-gray-200">Keterangan</th>
+                                            <th class="p-3 border border-gray-200">Nilai (Guru)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="file-submissions-tbody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1294,7 +2153,90 @@
         </div>
     </div>
 
-    <!-- GRADING MODAL -->
+    <!-- UPLOAD FILE SCREEN -->
+    <div id="upload-file-screen" class="hidden min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div class="bg-gray-800 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+            <div class="bg-gray-700 p-5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-white font-bold text-lg flex items-center gap-2"><i class="fas fa-upload"></i> Upload Hasil Kerja</h2>
+                    <p class="text-gray-300 text-xs mt-1">Halo, <span id="upload-student-name-display" class="font-semibold"></span></p>
+                </div>
+                <button onclick="document.getElementById('upload-file-screen').classList.add('hidden');document.getElementById('login-screen').classList.remove('hidden')" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <!-- Input Mata Pelajaran -->
+                <div>
+                    <label class="text-gray-300 text-xs font-semibold uppercase mb-1 block">Mata Pelajaran</label>
+                    <input id="murid-subject" type="text" placeholder="Contoh: PAI, Matematika..." class="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-xl outline-none focus:border-blue-400 text-sm">
+                </div>
+
+                <!-- Keterangan -->
+                <div>
+                    <label class="text-gray-300 text-xs font-semibold uppercase mb-1 block">Keterangan</label>
+                    <textarea id="murid-keterangan" rows="2" placeholder="Tulis keterangan tugas..." class="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-xl outline-none focus:border-blue-400 text-sm resize-none"></textarea>
+                </div>
+
+                <!-- Area Upload File -->
+                <div>
+                    <label class="text-gray-300 text-xs font-semibold uppercase mb-1 block">File / Foto / Video</label>
+                    <div class="border-2 border-dashed border-gray-500 rounded-2xl p-4 bg-gray-700 relative">
+
+                        <!-- Carousel preview file yang sudah dipilih -->
+                        <div id="file-carousel" class="hidden mb-3">
+                            <div id="file-carousel-track" class="flex gap-3 overflow-x-auto pb-2" style="scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;"></div>
+                        </div>
+
+                        <!-- Placeholder awal (hilang setelah ada file) -->
+                        <div id="upload-placeholder">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3 block text-center"></i>
+                            <p class="text-gray-400 text-sm mb-4 text-center">Pilih cara upload file</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <label class="flex flex-col items-center gap-1 bg-gray-600 hover:bg-gray-500 rounded-xl p-3 cursor-pointer transition-all">
+                                    <i class="fas fa-video text-blue-400 text-xl"></i>
+                                    <span class="text-xs text-gray-300">Kamera</span>
+                                    <input type="file" accept="video/*" capture="environment" class="hidden" onchange="handleFileCapture(this)">
+                                </label>
+                                <label class="flex flex-col items-center gap-1 bg-gray-600 hover:bg-gray-500 rounded-xl p-3 cursor-pointer transition-all">
+                                    <i class="fas fa-camera text-green-400 text-xl"></i>
+                                    <span class="text-xs text-gray-300">Foto</span>
+                                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleFileCapture(this)">
+                                </label>
+                                <label class="flex flex-col items-center gap-1 bg-gray-600 hover:bg-gray-500 rounded-xl p-3 cursor-pointer transition-all">
+                                    <i class="fas fa-folder-open text-yellow-400 text-xl"></i>
+                                    <span class="text-xs text-gray-300">File</span>
+                                    <input type="file" accept="*/*" class="hidden" onchange="handleFileCapture(this)">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Tombol tambah file (muncul setelah ada file) -->
+                        <div id="add-more-btn-area" class="hidden mt-2 flex justify-center">
+                            <div class="flex gap-3">
+                                <label class="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm px-4 py-2 rounded-xl cursor-pointer transition-all">
+                                    <i class="fas fa-video text-blue-400"></i>
+                                    <input type="file" accept="video/*" capture="environment" class="hidden" onchange="handleFileCapture(this)">
+                                </label>
+                                <label class="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm px-4 py-2 rounded-xl cursor-pointer transition-all">
+                                    <i class="fas fa-camera text-green-400"></i>
+                                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleFileCapture(this)">
+                                </label>
+                                <label class="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm px-4 py-2 rounded-xl cursor-pointer transition-all">
+                                    <i class="fas fa-folder-open text-yellow-400"></i>
+                                    <input type="file" accept="*/*" class="hidden" onchange="handleFileCapture(this)">
+                                </label>
+                                <span class="text-gray-400 text-xs self-center">+ Tambah File</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-submit-file" onclick="submitFileUpload()" class="hidden w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2">
+                    <i class="fas fa-paper-plane"></i> Kirim File
+                </button>
+            </div>
+        </div>
+    </div>
     <div id="grading-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 hidden">
         <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center">
